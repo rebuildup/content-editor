@@ -1,7 +1,26 @@
 import path from "path";
 import Database from "better-sqlite3";
+import fs from "fs";
 
-const dbPath = path.join(process.cwd(), "data", "content.db");
+// アクティブなデータベースを取得する関数
+function getActiveDbPath(): string {
+  const dataDir = path.join(process.cwd(), "data");
+  const configPath = path.join(dataDir, "db-config.json");
+
+  // 設定ファイルが存在しない場合はデフォルトを使用
+  if (!fs.existsSync(configPath)) {
+    return path.join(dataDir, "content.db");
+  }
+
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    return path.join(dataDir, config.activeDatabase || "content.db");
+  } catch {
+    return path.join(dataDir, "content.db");
+  }
+}
+
+const dbPath = getActiveDbPath();
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 
@@ -165,6 +184,60 @@ CREATE TRIGGER IF NOT EXISTS contents_fts_update AFTER UPDATE ON contents BEGIN
   DELETE FROM contents_fts WHERE rowid = old.rowid;
   INSERT INTO contents_fts(rowid, id, title, summary, search_full_text)
   VALUES (new.rowid, new.id, new.title, new.summary, new.search_full_text);
+END;
+`);
+
+// ========== Markdownページテーブル ==========
+db.exec(`
+CREATE TABLE IF NOT EXISTS markdown_pages (
+  id TEXT PRIMARY KEY,
+  content_id TEXT,
+  slug TEXT NOT NULL UNIQUE,
+  frontmatter TEXT NOT NULL, -- JSON
+  body TEXT NOT NULL,
+  html_cache TEXT,
+  path TEXT,
+  lang TEXT DEFAULT 'ja',
+  status TEXT DEFAULT 'draft' CHECK(status IN ('draft', 'published', 'archived')),
+  version INTEGER DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  published_at TEXT,
+  
+  FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_markdown_pages_slug ON markdown_pages(slug);
+CREATE INDEX IF NOT EXISTS idx_markdown_pages_content ON markdown_pages(content_id);
+CREATE INDEX IF NOT EXISTS idx_markdown_pages_path ON markdown_pages(path);
+CREATE INDEX IF NOT EXISTS idx_markdown_pages_status ON markdown_pages(status);
+CREATE INDEX IF NOT EXISTS idx_markdown_pages_published ON markdown_pages(published_at);
+`);
+
+// ========== Markdown全文検索テーブル ==========
+db.exec(`
+CREATE VIRTUAL TABLE IF NOT EXISTS markdown_pages_fts USING fts5(
+  id UNINDEXED,
+  slug UNINDEXED,
+  body,
+  content=markdown_pages,
+  content_rowid=rowid
+);
+
+-- FTS トリガー
+CREATE TRIGGER IF NOT EXISTS markdown_pages_fts_insert AFTER INSERT ON markdown_pages BEGIN
+  INSERT INTO markdown_pages_fts(rowid, id, slug, body)
+  VALUES (new.rowid, new.id, new.slug, new.body);
+END;
+
+CREATE TRIGGER IF NOT EXISTS markdown_pages_fts_delete AFTER DELETE ON markdown_pages BEGIN
+  DELETE FROM markdown_pages_fts WHERE rowid = old.rowid;
+END;
+
+CREATE TRIGGER IF NOT EXISTS markdown_pages_fts_update AFTER UPDATE ON markdown_pages BEGIN
+  DELETE FROM markdown_pages_fts WHERE rowid = old.rowid;
+  INSERT INTO markdown_pages_fts(rowid, id, slug, body)
+  VALUES (new.rowid, new.id, new.slug, new.body);
 END;
 `);
 

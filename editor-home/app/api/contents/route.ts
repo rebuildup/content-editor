@@ -1,42 +1,42 @@
-import db from '@/app/lib/db';
+import {
+    getContentDb,
+    addToIndex,
+    removeFromIndex,
+    getAllFromIndex,
+    getFromIndex,
+    deleteContentDb,
+} from '@/app/lib/content-db-manager';
 import { getFullContent, saveFullContent } from '@/app/lib/content-mapper';
 import type { Content } from '@/types/content';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
+// ========== GET: コンテンツ一覧取得 ==========
+export async function GET(req: Request) {
     try {
-        const rows = db.prepare(`
-            SELECT 
-                id, title, summary, lang, status, visibility,
-                published_at, created_at, updated_at,
-                thumbnails, seo
-            FROM contents
-            ORDER BY created_at DESC
-        `).all();
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
 
-        // タグも取得
-        const contents = rows.map((row: any) => {
-            const tags = db.prepare('SELECT tag FROM content_tags WHERE content_id = ?')
-                .all(row.id)
-                .map((t: any) => t.tag);
+        // 特定のコンテンツを取得
+        if (id) {
+            const indexData = getFromIndex(id);
+            if (!indexData) {
+                return Response.json({ error: 'Content not found' }, { status: 404 });
+            }
 
-            return {
-                id: row.id,
-                title: row.title,
-                summary: row.summary,
-                lang: row.lang,
-                status: row.status,
-                visibility: row.visibility,
-                publishedAt: row.published_at,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
-                tags: tags.length > 0 ? tags : undefined,
-                thumbnails: row.thumbnails ? JSON.parse(row.thumbnails) : undefined,
-                seo: row.seo ? JSON.parse(row.seo) : undefined,
-            };
-        });
+            const db = getContentDb(id);
+            const fullContent = getFullContent(db, id);
+            db.close();
 
+            if (!fullContent) {
+                return Response.json({ error: 'Content not found' }, { status: 404 });
+            }
+
+            return Response.json(fullContent);
+        }
+
+        // 全コンテンツの一覧を取得（インデックスから）
+        const contents = getAllFromIndex();
         return Response.json(contents);
     } catch (error) {
         console.error('GET /api/contents error:', error);
@@ -44,9 +44,14 @@ export async function GET() {
     }
 }
 
+// ========== POST: コンテンツ作成 ==========
 export async function POST(req: Request) {
     try {
         const data = await req.json();
+
+        if (!data.id || !data.title) {
+            return Response.json({ error: 'ID and title are required' }, { status: 400 });
+        }
 
         const content: Partial<Content> = {
             id: data.id,
@@ -67,45 +72,105 @@ export async function POST(req: Request) {
             updatedAt: new Date().toISOString(),
         };
 
-        saveFullContent(db, content);
+        // コンテンツ専用のデータベースを作成・取得
+        const db = getContentDb(data.id);
 
-        return Response.json({ ok: true, id: content.id });
+        try {
+            // コンテンツデータを保存
+            saveFullContent(db, content);
+
+            // インデックスに追加
+            addToIndex({
+                id: content.id!,
+                title: content.title!,
+                summary: content.summary,
+                lang: content.lang,
+                status: content.status,
+                visibility: content.visibility,
+                createdAt: content.createdAt!,
+                updatedAt: content.updatedAt!,
+                publishedAt: content.publishedAt,
+                tags: content.tags,
+                thumbnails: content.thumbnails,
+                seo: content.seo,
+            });
+
+            return Response.json({ ok: true, id: content.id });
+        } finally {
+            db.close();
+        }
     } catch (error) {
         console.error('POST /api/contents error:', error);
         return Response.json({ error: 'Failed to create content' }, { status: 500 });
     }
 }
 
+// ========== PUT: コンテンツ更新 ==========
 export async function PUT(req: Request) {
     try {
         const data = await req.json();
 
-        // 既存のコンテンツを取得
-        const existing = getFullContent(db, data.id);
-        if (!existing) {
+        if (!data.id) {
+            return Response.json({ error: 'ID is required' }, { status: 400 });
+        }
+
+        // インデックスで存在確認
+        const indexData = getFromIndex(data.id);
+        if (!indexData) {
             return Response.json({ error: 'Content not found' }, { status: 404 });
         }
 
-        // 更新データをマージ
-        const content: Partial<Content> = {
-            ...existing,
-            ...data,
-            id: data.id, // IDは変更不可
-            updatedAt: new Date().toISOString(),
-            searchable: data.searchable || {
-                fullText: `${data.title || existing.title} ${data.summary || existing.summary || ''} ${(data.tags || existing.tags || []).join(' ')}`,
-            },
-        };
+        // コンテンツ専用のデータベースを取得
+        const db = getContentDb(data.id);
 
-        saveFullContent(db, content);
+        try {
+            // 既存のコンテンツを取得
+            const existing = getFullContent(db, data.id);
+            if (!existing) {
+                return Response.json({ error: 'Content not found in database' }, { status: 404 });
+            }
 
-        return Response.json({ ok: true });
+            // 更新データをマージ
+            const content: Partial<Content> = {
+                ...existing,
+                ...data,
+                id: data.id, // IDは変更不可
+                updatedAt: new Date().toISOString(),
+                searchable: data.searchable || {
+                    fullText: `${data.title || existing.title} ${data.summary || existing.summary || ''} ${(data.tags || existing.tags || []).join(' ')}`,
+                },
+            };
+
+            // コンテンツデータを更新
+            saveFullContent(db, content);
+
+            // インデックスを更新
+            addToIndex({
+                id: content.id!,
+                title: content.title!,
+                summary: content.summary,
+                lang: content.lang,
+                status: content.status,
+                visibility: content.visibility,
+                createdAt: content.createdAt!,
+                updatedAt: content.updatedAt!,
+                publishedAt: content.publishedAt,
+                tags: content.tags,
+                thumbnails: content.thumbnails,
+                seo: content.seo,
+            });
+
+            return Response.json({ ok: true });
+        } finally {
+            db.close();
+        }
     } catch (error) {
         console.error('PUT /api/contents error:', error);
         return Response.json({ error: 'Failed to update content' }, { status: 500 });
     }
 }
 
+// ========== DELETE: コンテンツ削除 ==========
 export async function DELETE(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
@@ -115,11 +180,10 @@ export async function DELETE(req: Request) {
             return Response.json({ error: 'ID is required' }, { status: 400 });
         }
 
-        // カスケード削除（外部キー制約で自動削除）
-        const stmt = db.prepare('DELETE FROM contents WHERE id = ?');
-        const result = stmt.run(id);
+        // コンテンツデータベースごと削除
+        const success = deleteContentDb(id);
 
-        if (result.changes === 0) {
+        if (!success) {
             return Response.json({ error: 'Content not found' }, { status: 404 });
         }
 

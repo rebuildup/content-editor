@@ -1,0 +1,15 @@
+{
+  "activeDatabase": "content-backup.db",
+  "databases": {
+    "content.db": {
+      "name": "デフォルトデータベース",
+      "description": "メインのコンテンツデータベース",
+      "createdAt": "2025-10-24T13:01:35.147Z"
+    },
+    "content-backup.db": {
+      "name": "デフォルトデータベース のバックアップ",
+      "description": "2025/10/24 22:02:03 のバックアップ",
+      "createdAt": "2025-10-24T13:02:08.691Z"
+    }
+  }
+}
