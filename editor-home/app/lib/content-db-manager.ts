@@ -12,17 +12,17 @@ const INDEX_DB_PATH = path.join(DATA_DIR, 'index.db');
 
 // ディレクトリが存在しない場合は作成
 if (!fs.existsSync(CONTENT_DB_DIR)) {
-    fs.mkdirSync(CONTENT_DB_DIR, { recursive: true });
+  fs.mkdirSync(CONTENT_DB_DIR, { recursive: true });
 }
 
 // ========== インデックスデータベース（コンテンツの一覧管理） ==========
 
 function getIndexDb(): Database.Database {
-    const db = new Database(INDEX_DB_PATH);
-    db.pragma('journal_mode = WAL');
+  const db = new Database(INDEX_DB_PATH);
+  db.pragma('journal_mode = WAL');
 
-    // インデックステーブル作成
-    db.exec(`
+  // インデックステーブル作成
+  db.exec(`
     CREATE TABLE IF NOT EXISTS content_index (
       id TEXT PRIMARY KEY,
       db_file TEXT NOT NULL,
@@ -43,38 +43,38 @@ function getIndexDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_content_index_created ON content_index(created_at);
   `);
 
-    return db;
+  return db;
 }
 
 // ========== コンテンツデータベースのファイル名生成 ==========
 
 export function getContentDbPath(contentId: string): string {
-    const sanitizedId = contentId.replace(/[^a-zA-Z0-9_-]/g, '_');
-    return path.join(CONTENT_DB_DIR, `content-${sanitizedId}.db`);
+  const sanitizedId = contentId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  return path.join(CONTENT_DB_DIR, `content-${sanitizedId}.db`);
 }
 
 // ========== コンテンツデータベースの作成・取得 ==========
 
 export function getContentDb(contentId: string): Database.Database {
-    const dbPath = getContentDbPath(contentId);
-    const isNewDb = !fs.existsSync(dbPath);
+  const dbPath = getContentDbPath(contentId);
+  const isNewDb = !fs.existsSync(dbPath);
 
-    const db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
+  const db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
 
-    // 新規データベースの場合はスキーマを作成
-    if (isNewDb) {
-        initializeContentDbSchema(db);
-    }
+  // 新規データベースの場合はスキーマを作成
+  if (isNewDb) {
+    initializeContentDbSchema(db);
+  }
 
-    return db;
+  return db;
 }
 
 // ========== コンテンツデータベースのスキーマ初期化 ==========
 
 function initializeContentDbSchema(db: Database.Database): void {
-    // メインテーブル: contents
-    db.exec(`
+  // メインテーブル: contents
+  db.exec(`
     CREATE TABLE IF NOT EXISTS contents (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -227,179 +227,200 @@ function initializeContentDbSchema(db: Database.Database): void {
       INSERT INTO markdown_pages_fts(rowid, id, slug, body)
       VALUES (new.rowid, new.id, new.slug, new.body);
     END;
+    
+    CREATE TABLE IF NOT EXISTS media (
+      id TEXT PRIMARY KEY,
+      content_id TEXT,
+      filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      alt TEXT,
+      description TEXT,
+      tags TEXT,
+      data BLOB NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE SET NULL
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_media_content ON media(content_id);
+    CREATE INDEX IF NOT EXISTS idx_media_filename ON media(filename);
+    CREATE INDEX IF NOT EXISTS idx_media_created ON media(created_at);
   `);
 }
 
 // ========== インデックスデータベース操作 ==========
 
 export function addToIndex(contentData: {
-    id: string;
-    title: string;
-    summary?: string;
-    lang?: string;
-    status?: string;
-    visibility?: string;
-    createdAt: string;
-    updatedAt: string;
-    publishedAt?: string;
-    tags?: string[];
-    thumbnails?: any;
-    seo?: any;
+  id: string;
+  title: string;
+  summary?: string;
+  lang?: string;
+  status?: string;
+  visibility?: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+  tags?: string[];
+  thumbnails?: any;
+  seo?: any;
 }): void {
-    const indexDb = getIndexDb();
-    const dbFile = path.basename(getContentDbPath(contentData.id));
+  const indexDb = getIndexDb();
+  const dbFile = path.basename(getContentDbPath(contentData.id));
 
-    const stmt = indexDb.prepare(`
+  const stmt = indexDb.prepare(`
     INSERT OR REPLACE INTO content_index 
     (id, db_file, title, summary, lang, status, visibility, created_at, updated_at, published_at, tags, thumbnails, seo)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-    stmt.run(
-        contentData.id,
-        dbFile,
-        contentData.title,
-        contentData.summary || null,
-        contentData.lang || 'ja',
-        contentData.status || 'draft',
-        contentData.visibility || 'draft',
-        contentData.createdAt,
-        contentData.updatedAt,
-        contentData.publishedAt || null,
-        contentData.tags ? JSON.stringify(contentData.tags) : null,
-        contentData.thumbnails ? JSON.stringify(contentData.thumbnails) : null,
-        contentData.seo ? JSON.stringify(contentData.seo) : null
-    );
+  stmt.run(
+    contentData.id,
+    dbFile,
+    contentData.title,
+    contentData.summary || null,
+    contentData.lang || 'ja',
+    contentData.status || 'draft',
+    contentData.visibility || 'draft',
+    contentData.createdAt,
+    contentData.updatedAt,
+    contentData.publishedAt || null,
+    contentData.tags ? JSON.stringify(contentData.tags) : null,
+    contentData.thumbnails ? JSON.stringify(contentData.thumbnails) : null,
+    contentData.seo ? JSON.stringify(contentData.seo) : null
+  );
 
-    indexDb.close();
+  indexDb.close();
 }
 
 export function removeFromIndex(contentId: string): void {
-    const indexDb = getIndexDb();
-    indexDb.prepare('DELETE FROM content_index WHERE id = ?').run(contentId);
-    indexDb.close();
+  const indexDb = getIndexDb();
+  indexDb.prepare('DELETE FROM content_index WHERE id = ?').run(contentId);
+  indexDb.close();
 }
 
 export function getAllFromIndex(): any[] {
-    const indexDb = getIndexDb();
-    const rows = indexDb.prepare('SELECT * FROM content_index ORDER BY created_at DESC').all();
-    indexDb.close();
+  const indexDb = getIndexDb();
+  const rows = indexDb.prepare('SELECT * FROM content_index ORDER BY created_at DESC').all();
+  indexDb.close();
 
-    return rows.map((row: any) => ({
-        id: row.id,
-        dbFile: row.db_file,
-        title: row.title,
-        summary: row.summary,
-        lang: row.lang,
-        status: row.status,
-        visibility: row.visibility,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        publishedAt: row.published_at,
-        tags: row.tags ? JSON.parse(row.tags) : undefined,
-        thumbnails: row.thumbnails ? JSON.parse(row.thumbnails) : undefined,
-        seo: row.seo ? JSON.parse(row.seo) : undefined,
-    }));
+  return rows.map((row: any) => ({
+    id: row.id,
+    dbFile: row.db_file,
+    title: row.title,
+    summary: row.summary,
+    lang: row.lang,
+    status: row.status,
+    visibility: row.visibility,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    publishedAt: row.published_at,
+    tags: row.tags ? JSON.parse(row.tags) : undefined,
+    thumbnails: row.thumbnails ? JSON.parse(row.thumbnails) : undefined,
+    seo: row.seo ? JSON.parse(row.seo) : undefined,
+  }));
 }
 
 export function getFromIndex(contentId: string): any | null {
-    const indexDb = getIndexDb();
-    const row = indexDb.prepare('SELECT * FROM content_index WHERE id = ?').get(contentId);
-    indexDb.close();
+  const indexDb = getIndexDb();
+  const row = indexDb.prepare('SELECT * FROM content_index WHERE id = ?').get(contentId);
+  indexDb.close();
 
-    if (!row) return null;
+  if (!row) return null;
 
-    return {
-        id: (row as any).id,
-        dbFile: (row as any).db_file,
-        title: (row as any).title,
-        summary: (row as any).summary,
-        lang: (row as any).lang,
-        status: (row as any).status,
-        visibility: (row as any).visibility,
-        createdAt: (row as any).created_at,
-        updatedAt: (row as any).updated_at,
-        publishedAt: (row as any).published_at,
-        tags: (row as any).tags ? JSON.parse((row as any).tags) : undefined,
-        thumbnails: (row as any).thumbnails ? JSON.parse((row as any).thumbnails) : undefined,
-        seo: (row as any).seo ? JSON.parse((row as any).seo) : undefined,
-    };
+  return {
+    id: (row as any).id,
+    dbFile: (row as any).db_file,
+    title: (row as any).title,
+    summary: (row as any).summary,
+    lang: (row as any).lang,
+    status: (row as any).status,
+    visibility: (row as any).visibility,
+    createdAt: (row as any).created_at,
+    updatedAt: (row as any).updated_at,
+    publishedAt: (row as any).published_at,
+    tags: (row as any).tags ? JSON.parse((row as any).tags) : undefined,
+    thumbnails: (row as any).thumbnails ? JSON.parse((row as any).thumbnails) : undefined,
+    seo: (row as any).seo ? JSON.parse((row as any).seo) : undefined,
+  };
 }
 
 // ========== コンテンツデータベース削除 ==========
 
 export function deleteContentDb(contentId: string): boolean {
-    const dbPath = getContentDbPath(contentId);
+  const dbPath = getContentDbPath(contentId);
 
-    if (!fs.existsSync(dbPath)) {
-        return false;
+  if (!fs.existsSync(dbPath)) {
+    return false;
+  }
+
+  try {
+    // データベースファイルとWALファイルを削除
+    fs.unlinkSync(dbPath);
+
+    const walPath = `${dbPath}-wal`;
+    if (fs.existsSync(walPath)) {
+      fs.unlinkSync(walPath);
     }
 
-    try {
-        // データベースファイルとWALファイルを削除
-        fs.unlinkSync(dbPath);
-
-        const walPath = `${dbPath}-wal`;
-        if (fs.existsSync(walPath)) {
-            fs.unlinkSync(walPath);
-        }
-
-        const shmPath = `${dbPath}-shm`;
-        if (fs.existsSync(shmPath)) {
-            fs.unlinkSync(shmPath);
-        }
-
-        // インデックスから削除
-        removeFromIndex(contentId);
-
-        return true;
-    } catch (error) {
-        console.error('Failed to delete content database:', error);
-        return false;
+    const shmPath = `${dbPath}-shm`;
+    if (fs.existsSync(shmPath)) {
+      fs.unlinkSync(shmPath);
     }
+
+    // インデックスから削除
+    removeFromIndex(contentId);
+
+    return true;
+  } catch (error) {
+    console.error('Failed to delete content database:', error);
+    return false;
+  }
 }
 
 // ========== 統計情報 ==========
 
 export function getContentDbStats(): {
-    totalContents: number;
-    totalDbFiles: number;
-    totalSize: number;
-    contentsList: Array<{
-        id: string;
-        title: string;
-        dbFile: string;
-        size: number;
-    }>;
+  totalContents: number;
+  totalDbFiles: number;
+  totalSize: number;
+  contentsList: Array<{
+    id: string;
+    title: string;
+    dbFile: string;
+    size: number;
+  }>;
 } {
-    const indexDb = getIndexDb();
-    const allContents = indexDb.prepare('SELECT id, title, db_file FROM content_index').all();
-    indexDb.close();
+  const indexDb = getIndexDb();
+  const allContents = indexDb.prepare('SELECT id, title, db_file FROM content_index').all();
+  indexDb.close();
 
-    let totalSize = 0;
-    const contentsList = allContents.map((row: any) => {
-        const dbPath = path.join(CONTENT_DB_DIR, row.db_file);
-        let size = 0;
+  let totalSize = 0;
+  const contentsList = allContents.map((row: any) => {
+    const dbPath = path.join(CONTENT_DB_DIR, row.db_file);
+    let size = 0;
 
-        if (fs.existsSync(dbPath)) {
-            const stats = fs.statSync(dbPath);
-            size = stats.size;
-            totalSize += size;
-        }
-
-        return {
-            id: row.id,
-            title: row.title,
-            dbFile: row.db_file,
-            size,
-        };
-    });
+    if (fs.existsSync(dbPath)) {
+      const stats = fs.statSync(dbPath);
+      size = stats.size;
+      totalSize += size;
+    }
 
     return {
-        totalContents: allContents.length,
-        totalDbFiles: contentsList.length,
-        totalSize,
-        contentsList,
+      id: row.id,
+      title: row.title,
+      dbFile: row.db_file,
+      size,
     };
+  });
+
+  return {
+    totalContents: allContents.length,
+    totalDbFiles: contentsList.length,
+    totalSize,
+    contentsList,
+  };
 }
 

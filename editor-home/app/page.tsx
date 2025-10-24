@@ -194,6 +194,12 @@ export default function Home() {
                 → Markdownページ管理
               </a>
               <a
+                href="/media"
+                className="text-sm text-primary hover:underline"
+              >
+                → メディア管理
+              </a>
+              <a
                 href="/databases"
                 className="text-sm text-primary hover:underline"
               >
