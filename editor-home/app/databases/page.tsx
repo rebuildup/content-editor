@@ -1,7 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Box,
   Button,
@@ -16,6 +14,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import Grid2 from "../components/Grid2";
 
 interface DatabaseInfo {
@@ -182,7 +182,7 @@ export default function DatabasesPage() {
                     <Card>
                       <CardContent>
                         <Typography variant="h4" color="primary" gutterBottom>
-                      {stats.contentsCount}
+                          {stats.contentsCount}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           コンテンツ数
@@ -194,10 +194,10 @@ export default function DatabasesPage() {
                     <Card>
                       <CardContent>
                         <Typography variant="h4" color="primary" gutterBottom>
-                      {stats.markdownPagesCount}
+                          {stats.markdownPagesCount}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                      Markdownページ数
+                          Markdownページ数
                         </Typography>
                       </CardContent>
                     </Card>
@@ -314,7 +314,14 @@ export default function DatabasesPage() {
                       </Box>
                     </Box>
 
-                    <Box sx={{ mb: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+                    <Box
+                      sx={{
+                        mb: 2,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1,
+                      }}
+                    >
                       <Typography variant="body2" color="text.secondary">
                         <strong>ID:</strong> {database.id}
                       </Typography>
@@ -404,53 +411,49 @@ export default function DatabasesPage() {
         fullWidth
       >
         <DialogTitle>新しいデータベースを作成</DialogTitle>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const data = {
-                    name: formData.get("name") as string,
-                    description: formData.get("description") as string,
-                  };
-                  handleCreateDatabase(data);
-                }}
-              >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            const data = {
+              name: formData.get("name") as string,
+              description: formData.get("description") as string,
+            };
+            handleCreateDatabase(data);
+          }}
+        >
           <DialogContent>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               データベースの基本情報を入力してください
             </Typography>
             <TextField
-                      name="name"
+              name="name"
               label="データベース名"
               fullWidth
-                      required
-                      disabled={isLoading}
+              required
+              disabled={isLoading}
               placeholder="my-database"
               sx={{ mb: 2 }}
             />
             <TextField
-                      name="description"
+              name="description"
               label="説明"
               fullWidth
               multiline
-                      rows={3}
-                      disabled={isLoading}
+              rows={3}
+              disabled={isLoading}
               placeholder="データベースの説明"
             />
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setIsCreateDialogOpen(false)}>
-                    キャンセル
+              キャンセル
             </Button>
-            <Button
-                    type="submit"
-              variant="contained"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "作成中..." : "作成"}
+            <Button type="submit" variant="contained" disabled={isLoading}>
+              {isLoading ? "作成中..." : "作成"}
             </Button>
           </DialogActions>
-              </form>
+        </form>
       </Dialog>
 
       <Dialog
@@ -461,54 +464,50 @@ export default function DatabasesPage() {
       >
         <DialogTitle>データベースを編集</DialogTitle>
         {editingDatabase && (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.currentTarget);
-                  const data = {
-                    id: editingDatabase.id,
-                    name: formData.get("name") as string,
-                    description: formData.get("description") as string,
-                  };
-                  handleEditDatabase(data);
-                }}
-              >
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const data = {
+                id: editingDatabase.id,
+                name: formData.get("name") as string,
+                description: formData.get("description") as string,
+              };
+              handleEditDatabase(data);
+            }}
+          >
             <DialogContent>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 データベースの情報を編集できます
               </Typography>
               <TextField
-                      name="name"
+                name="name"
                 label="データベース名"
                 fullWidth
                 required
-                      defaultValue={editingDatabase.name}
-                      disabled={isLoading}
+                defaultValue={editingDatabase.name}
+                disabled={isLoading}
                 sx={{ mb: 2 }}
               />
               <TextField
-                      name="description"
+                name="description"
                 label="説明"
                 fullWidth
                 multiline
                 rows={3}
-                      defaultValue={editingDatabase.description || ""}
-                      disabled={isLoading}
-                    />
+                defaultValue={editingDatabase.description || ""}
+                disabled={isLoading}
+              />
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setIsEditDialogOpen(false)}>
-                    キャンセル
+                キャンセル
               </Button>
-              <Button
-                    type="submit"
-                variant="contained"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "保存中..." : "保存"}
+              <Button type="submit" variant="contained" disabled={isLoading}>
+                {isLoading ? "保存中..." : "保存"}
               </Button>
             </DialogActions>
-              </form>
+          </form>
         )}
       </Dialog>
     </Box>

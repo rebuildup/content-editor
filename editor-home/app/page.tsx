@@ -1,19 +1,6 @@
 "use client";
 
 import {
-  BarChart3,
-  Database,
-  Edit,
-  FileText,
-  FolderOpen,
-  Image as ImageIcon,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import {
   Box,
   Button,
   Card,
@@ -27,9 +14,22 @@ import {
   Paper,
   Typography,
 } from "@mui/material";
-import Grid2 from "./components/Grid2";
+import {
+  BarChart3,
+  Database,
+  Edit,
+  FileText,
+  FolderOpen,
+  Image as ImageIcon,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { ContentForm } from "@/components/content-form";
 import type { Content } from "@/types/content";
+import Grid2 from "./components/Grid2";
 
 interface DbStats {
   totalContents: number;
@@ -312,15 +312,14 @@ export default function Home() {
                 textAlign: "center",
               }}
             >
-              <FileText size={48} style={{ color: "#9ca3af", marginBottom: 16 }} />
+              <FileText
+                size={48}
+                style={{ color: "#9ca3af", marginBottom: 16 }}
+              />
               <Typography variant="h6" gutterBottom>
                 コンテンツがありません
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 3 }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 新規作成ボタンから最初のコンテンツを作成してください
               </Typography>
               <Button
@@ -336,7 +335,13 @@ export default function Home() {
           <Grid2 container spacing={3}>
             {contents.map((content) => (
               <Grid2 xs={12} md={6} lg={4} key={content.id}>
-                <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                <Card
+                  sx={{
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
                   <CardContent sx={{ flexGrow: 1 }}>
                     <Box
                       sx={{
@@ -368,7 +373,14 @@ export default function Home() {
                       />
                     </Box>
 
-                    <Box sx={{ mb: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+                    <Box
+                      sx={{
+                        mb: 2,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1,
+                      }}
+                    >
                       <Typography variant="body2" color="text.secondary">
                         <strong>ID:</strong> {content.id}
                       </Typography>
@@ -383,7 +395,9 @@ export default function Home() {
                         })}
                       </Typography>
                       {content.tags && content.tags.length > 0 && (
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                        <Box
+                          sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                        >
                           {content.tags.slice(0, 3).map((tag) => (
                             <Chip
                               key={tag}
@@ -393,7 +407,10 @@ export default function Home() {
                             />
                           ))}
                           {content.tags.length > 3 && (
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               +{content.tags.length - 3}
                             </Typography>
                           )}

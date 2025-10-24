@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
 import {
   Box,
   Button,
@@ -12,6 +10,8 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import Image from "next/image";
+import { useState } from "react";
 
 interface MediaUploadFormProps {
   onSubmit: (formData: FormData) => void;
@@ -118,7 +118,11 @@ export function MediaUploadForm({
             )}
           </Box>
           {file && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 1, display: "block" }}
+            >
               選択済み: {file.name} ({(file.size / 1024).toFixed(2)} KB)
             </Typography>
           )}
@@ -190,11 +194,7 @@ export function MediaUploadForm({
       <Divider sx={{ my: 3 }} />
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-        <Button
-          variant="outlined"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
+        <Button variant="outlined" onClick={onCancel} disabled={isLoading}>
           キャンセル
         </Button>
         <Button type="submit" variant="contained" disabled={isLoading}>

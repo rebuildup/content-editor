@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import type { MarkdownPage } from "@/types/markdown";
 import {
   Box,
   Button,
@@ -13,8 +11,9 @@ import {
   Tab,
   Tabs,
   TextField,
-  Typography,
 } from "@mui/material";
+import { useState } from "react";
+import type { MarkdownPage } from "@/types/markdown";
 import Grid2 from "../app/components/Grid2";
 
 interface MarkdownFormProps {
@@ -77,9 +76,12 @@ export function MarkdownForm({
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ pt: 2 }}>
-      <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-        {tabs.map((tab, index) => (
-          <Tab key={index} label={tab.label} />
+      <Tabs
+        value={activeTab}
+        onChange={(_, newValue) => setActiveTab(newValue)}
+      >
+        {tabs.map((tab) => (
+          <Tab key={tab.label} label={tab.label} />
         ))}
       </Tabs>
 
@@ -309,11 +311,7 @@ export function MarkdownForm({
       <Divider sx={{ my: 3 }} />
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-        <Button
-          variant="outlined"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
+        <Button variant="outlined" onClick={onCancel} disabled={isLoading}>
           キャンセル
         </Button>
         <Button type="submit" variant="contained" disabled={isLoading}>

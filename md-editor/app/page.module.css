@@ -1,13 +1,13 @@
 .page {
-  --background: #fafafa;
-  --foreground: #fff;
+  --background: #0a0a0a;
+  --foreground: #1a1a1a;
 
-  --text-primary: #000;
-  --text-secondary: #666;
+  --text-primary: #ededed;
+  --text-secondary: #a3a3a3;
 
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-  --button-secondary-border: #ebebeb;
+  --button-primary-hover: #3b82f6;
+  --button-secondary-hover: #2a2a2a;
+  --button-secondary-border: #2a2a2a;
 
   display: flex;
   min-height: 100vh;
@@ -122,20 +122,6 @@ a.secondary {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .logo {
-    filter: invert();
-  }
-
-  .page {
-    --background: #000;
-    --foreground: #000;
-
-    --text-primary: #ededed;
-    --text-secondary: #999;
-
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
-    --button-secondary-border: #1a1a1a;
-  }
+.logo {
+  filter: invert();
 }

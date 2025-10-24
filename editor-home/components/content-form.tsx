@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import type { Content } from "@/types/content";
 import {
   Box,
   Button,
+  Card,
+  CardContent,
   Chip,
   Divider,
   FormControl,
@@ -15,10 +15,9 @@ import {
   Tabs,
   TextField,
   Typography,
-  Card,
-  CardContent,
-  IconButton,
 } from "@mui/material";
+import { useState } from "react";
+import type { Content } from "@/types/content";
 import Grid2 from "../app/components/Grid2";
 
 interface ContentFormProps {
@@ -119,9 +118,12 @@ export function ContentForm({
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ pt: 2 }}>
-      <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-        {tabs.map((tab, index) => (
-          <Tab key={index} label={tab.label} />
+      <Tabs
+        value={activeTab}
+        onChange={(_, newValue) => setActiveTab(newValue)}
+      >
+        {tabs.map((tab) => (
+          <Tab key={tab.label} label={tab.label} />
         ))}
       </Tabs>
 
@@ -592,11 +594,7 @@ export function ContentForm({
       <Divider sx={{ my: 3 }} />
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
-        <Button
-          variant="outlined"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
+        <Button variant="outlined" onClick={onCancel} disabled={isLoading}>
           キャンセル
         </Button>
         <Button type="submit" variant="contained" disabled={isLoading}>

@@ -1,8 +1,8 @@
 "use client";
 
+import Box, { type BoxProps } from "@mui/material/Box";
 // Material UI v7 での Grid2 のラッパー
 import { styled } from "@mui/material/styles";
-import Box, { BoxProps } from "@mui/material/Box";
 
 interface Grid2Props extends BoxProps {
   container?: boolean;
@@ -16,7 +16,13 @@ interface Grid2Props extends BoxProps {
 
 const Grid2 = styled(Box, {
   shouldForwardProp: (prop) =>
-    prop !== "container" && prop !== "spacing" && prop !== "xs" && prop !== "sm" && prop !== "md" && prop !== "lg" && prop !== "xl",
+    prop !== "container" &&
+    prop !== "spacing" &&
+    prop !== "xs" &&
+    prop !== "sm" &&
+    prop !== "md" &&
+    prop !== "lg" &&
+    prop !== "xl",
 })<Grid2Props>(({ theme, container, spacing, xs, sm, md, lg, xl }) => ({
   ...(container && {
     display: "grid",
@@ -32,13 +38,26 @@ const Grid2 = styled(Box, {
       gridColumn: md ? `span ${md}` : sm ? `span ${sm}` : `span ${xs || 12}`,
     },
     [theme.breakpoints.up("lg")]: {
-      gridColumn: lg ? `span ${lg}` : md ? `span ${md}` : sm ? `span ${sm}` : `span ${xs || 12}`,
+      gridColumn: lg
+        ? `span ${lg}`
+        : md
+          ? `span ${md}`
+          : sm
+            ? `span ${sm}`
+            : `span ${xs || 12}`,
     },
     [theme.breakpoints.up("xl")]: {
-      gridColumn: xl ? `span ${xl}` : lg ? `span ${lg}` : md ? `span ${md}` : sm ? `span ${sm}` : `span ${xs || 12}`,
+      gridColumn: xl
+        ? `span ${xl}`
+        : lg
+          ? `span ${lg}`
+          : md
+            ? `span ${md}`
+            : sm
+              ? `span ${sm}`
+              : `span ${xs || 12}`,
     },
   }),
 }));
 
 export default Grid2;
-

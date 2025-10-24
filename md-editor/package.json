@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "type-check": "tsc --noEmit",
+    "test": "echo 'No tests configured yet' && exit 0",
+    "test:all": "pnpm run type-check && pnpm run lint && pnpm run build"
   },
   "dependencies": {
     "next": "16.0.0",
