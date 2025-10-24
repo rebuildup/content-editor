@@ -57,6 +57,11 @@ TypeScript 型定義の詳細。
 - 高度な使用例（バージョニング、多言語対応）
 - React フック例
 
+### 📋 参考資料
+
+- **[editor-home-design.md](./editor-home-design.md)** - 初期設計ドキュメント
+- **[reference/](./reference/)** - 元の型定義参照（実装は `editor-home/types/` にあります）
+
 ---
 
 ## 🚀 クイックスタート
