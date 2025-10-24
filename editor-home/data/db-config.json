@@ -1,0 +1,10 @@
+{
+  "activeDatabase": "content.db",
+  "databases": {
+    "content.db": {
+      "name": "デフォルトデータベース",
+      "description": "メインのコンテンツデータベース",
+      "createdAt": "2025-10-24T15:28:31.908Z"
+    }
+  }
+}

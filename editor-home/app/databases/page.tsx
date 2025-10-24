@@ -1,27 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Copy, Database, CheckCircle2, HardDrive } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 interface DatabaseInfo {
   id: string;
@@ -42,476 +21,469 @@ interface DatabaseStats {
 
 export default function DatabasesPage() {
   const [databases, setDatabases] = useState<DatabaseInfo[]>([]);
-  const [activeDatabase, setActiveDatabase] = useState<string>("");
+  const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
-  const [selectedDbForCopy, setSelectedDbForCopy] = useState<string>("");
-  const [newDb, setNewDb] = useState({ id: "", name: "", description: "" });
-  const [copyDb, setCopyDb] = useState({ targetId: "", name: "", description: "" });
-  const [statsMap, setStatsMap] = useState<Record<string, DatabaseStats>>({});
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingDatabase, setEditingDatabase] = useState<DatabaseInfo | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   // データベース一覧を取得
-  const fetchDatabases = async () => {
+  const fetchDatabases = useCallback(async () => {
     try {
       const response = await fetch("/api/databases");
       const data = await response.json();
-      setDatabases(data.databases);
-      setActiveDatabase(data.activeDatabase);
-      
-      // 各データベースの統計を取得
-      for (const db of data.databases) {
-        fetchStats(db.id);
-      }
+      // データが配列でない場合は空配列を設定
+      setDatabases(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch databases:", error);
+      setDatabases([]);
     }
-  };
+  }, []);
 
-  // データベース統計を取得
-  const fetchStats = async (id: string) => {
+  // 統計情報を取得
+  const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch(`/api/databases/stats?id=${encodeURIComponent(id)}`);
-      if (response.ok) {
-        const stats = await response.json();
-        setStatsMap((prev) => ({ ...prev, [id]: stats }));
-      }
+      const response = await fetch("/api/databases/stats");
+      const data = await response.json();
+      setStats(data);
     } catch (error) {
-      console.error(`Failed to fetch stats for ${id}:`, error);
+      console.error("Failed to fetch stats:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDatabases();
-  }, []);
+    fetchStats();
+  }, [fetchDatabases, fetchStats]);
 
-  // データベース作成
-  const handleCreateDatabase = async () => {
-    if (!newDb.id || !newDb.name) {
-      alert("IDと名前は必須です");
-      return;
-    }
-
+  // 新しいデータベースを作成
+  const handleCreateDatabase = async (data: Partial<DatabaseInfo>) => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/databases", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "create",
-          id: newDb.id,
-          name: newDb.name,
-          description: newDb.description,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        setIsCreateDialogOpen(false);
+        await fetchDatabases();
+        await fetchStats();
+      } else {
         const error = await response.json();
-        alert(error.error || "作成に失敗しました");
-        return;
+        alert(
+          `データベースの作成に失敗しました: ${error.error || "不明なエラー"}`,
+        );
       }
-
-      setIsCreateDialogOpen(false);
-      setNewDb({ id: "", name: "", description: "" });
-      await fetchDatabases();
     } catch (error) {
       console.error("Failed to create database:", error);
-      alert("作成に失敗しました");
+      alert("データベースの作成に失敗しました");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // データベースコピー
-  const handleCopyDatabase = async () => {
-    if (!selectedDbForCopy || !copyDb.targetId || !copyDb.name) {
-      alert("必須項目を入力してください");
-      return;
-    }
-
+  // データベースを編集
+  const handleEditDatabase = async (data: Partial<DatabaseInfo>) => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/databases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "copy",
-          sourceId: selectedDbForCopy,
-          targetId: copyDb.targetId,
-          name: copyDb.name,
-          description: copyDb.description,
-        }),
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        setEditingDatabase(null);
+        setIsEditDialogOpen(false);
+        await fetchDatabases();
+        await fetchStats();
+      } else {
         const error = await response.json();
-        alert(error.error || "コピーに失敗しました");
-        return;
+        alert(
+          `データベースの更新に失敗しました: ${error.error || "不明なエラー"}`,
+        );
       }
-
-      setIsCopyDialogOpen(false);
-      setSelectedDbForCopy("");
-      setCopyDb({ targetId: "", name: "", description: "" });
-      await fetchDatabases();
     } catch (error) {
-      console.error("Failed to copy database:", error);
-      alert("コピーに失敗しました");
+      console.error("Failed to edit database:", error);
+      alert("データベースの編集に失敗しました");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // データベース切り替え
-  const handleSwitchDatabase = async (id: string) => {
-    if (id === activeDatabase) return;
-
-    if (!confirm("データベースを切り替えますか？サーバーを再起動する必要があります。")) {
+  // データベースを削除
+  const handleDeleteDatabase = async (id: string) => {
+    if (!confirm("このデータベースを削除してもよろしいですか？")) {
       return;
     }
 
-    setIsLoading(true);
     try {
-      const response = await fetch("/api/databases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "switch",
-          id,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || "切り替えに失敗しました");
-        return;
-      }
-
-      alert("データベースを切り替えました。サーバーを再起動してください。");
-      await fetchDatabases();
-    } catch (error) {
-      console.error("Failed to switch database:", error);
-      alert("切り替えに失敗しました");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // データベース削除
-  const handleDeleteDatabase = async (id: string, name: string) => {
-    if (!confirm(`データベース「${name}」を削除しますか？この操作は元に戻せません。`)) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch(`/api/databases?id=${encodeURIComponent(id)}`, {
+      const response = await fetch(`/api/databases?id=${id}`, {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        alert(error.error || "削除に失敗しました");
-        return;
+      if (response.ok) {
+        await fetchDatabases();
+        await fetchStats();
       }
-
-      await fetchDatabases();
     } catch (error) {
       console.error("Failed to delete database:", error);
-      alert("削除に失敗しました");
-    } finally {
-      setIsLoading(false);
+      alert("データベースの削除に失敗しました");
     }
   };
 
-  // ファイルサイズをフォーマット
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  // 編集ダイアログを開く
+  const openEditDialog = (database: DatabaseInfo) => {
+    setEditingDatabase({ ...database });
+    setIsEditDialogOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight">データベース管理</h1>
-            <p className="text-muted-foreground mt-2">
-              データベースの作成、切り替え、バックアップを管理します
-            </p>
-            <div className="flex gap-4 mt-4">
-              <a href="/" className="text-sm text-primary hover:underline">
-                ← コンテンツ管理
-              </a>
-              <a href="/markdown" className="text-sm text-primary hover:underline">
-                Markdownページ管理
-              </a>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl">
+                データベース管理
+              </h1>
+              <p className="mt-2 text-lg text-gray-600">
+                プロジェクト内のデータベースファイルを管理します
+              </p>
+
+              {/* 統計情報をカード形式で表示 */}
+              {stats && (
+                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="card p-6">
+                    <div className="text-3xl font-bold text-primary-600">
+                      {stats.contentsCount}
+                    </div>
+                    <div className="text-sm text-gray-600">コンテンツ数</div>
+                  </div>
+                  <div className="card p-6">
+                    <div className="text-3xl font-bold text-primary-600">
+                      {stats.markdownPagesCount}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Markdownページ数
+                    </div>
+                  </div>
+                  <div className="card p-6">
+                    <div className="text-3xl font-bold text-primary-600">
+                      {stats.tagsCount}
+                    </div>
+                    <div className="text-sm text-gray-600">タグ数</div>
+                  </div>
+                  <div className="card p-6">
+                    <div className="text-3xl font-bold text-primary-600">
+                      {(stats.fileSize / 1024).toFixed(1)} KB
+                    </div>
+                    <div className="text-sm text-gray-600">合計サイズ</div>
+                  </div>
+                </div>
+              )}
+
+              {/* ナビゲーションリンク */}
+              <div className="mt-6 flex flex-wrap gap-4">
+                <a
+                  href="/"
+                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
+                >
+                  ← コンテンツ管理
+                </a>
+                <a
+                  href="/markdown"
+                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
+                >
+                  → Markdown管理
+                </a>
+                <a
+                  href="/media"
+                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
+                >
+                  → メディア管理
+                </a>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <button
+                type="button"
+                className="btn btn-primary w-full sm:w-auto"
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
+                ➕ 新規作成
+              </button>
             </div>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                新規データベース作成
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>新規データベース作成</DialogTitle>
-                <DialogDescription>
-                  新しい空のデータベースを作成します
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="db-id">データベースID（ファイル名）</Label>
-                  <Input
-                    id="db-id"
-                    placeholder="example-db"
-                    value={newDb.id}
-                    onChange={(e) => setNewDb({ ...newDb, id: e.target.value })}
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    自動的に.dbが付与されます
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="db-name">表示名</Label>
-                  <Input
-                    id="db-name"
-                    placeholder="サンプルデータベース"
-                    value={newDb.name}
-                    onChange={(e) => setNewDb({ ...newDb, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="db-desc">説明（任意）</Label>
-                  <Textarea
-                    id="db-desc"
-                    placeholder="このデータベースの用途..."
-                    value={newDb.description}
-                    onChange={(e) => setNewDb({ ...newDb, description: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreateDialogOpen(false)}
-                  disabled={isLoading}
-                >
-                  キャンセル
-                </Button>
-                <Button onClick={handleCreateDatabase} disabled={isLoading}>
-                  作成
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
 
-        {/* アクティブなデータベース */}
-        <Card className="mb-6 border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-              アクティブなデータベース
-            </CardTitle>
-            <CardDescription>
-              現在使用中のデータベース（サーバー再起動で反映）
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-mono">{activeDatabase}</div>
-          </CardContent>
-        </Card>
-
-        {/* データベース一覧 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {databases.map((db) => {
-            const stats = statsMap[db.id];
-            return (
-              <Card
-                key={db.id}
-                className={db.isActive ? "border-primary shadow-md" : ""}
+        {/* 作成ダイアログ */}
+        {isCreateDialogOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="card mx-4 w-full max-w-lg animate-scale-in">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  新しいデータベースを作成
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  データベースの基本情報を入力してください
+                </p>
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const data = {
+                    name: formData.get("name") as string,
+                    description: formData.get("description") as string,
+                  };
+                  handleCreateDatabase(data);
+                }}
               >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Database className="h-5 w-5" />
-                    {db.name}
-                    {db.isActive && (
-                      <CheckCircle2 className="h-4 w-4 text-primary ml-auto" />
-                    )}
-                  </CardTitle>
-                  <CardDescription className="font-mono text-xs">
-                    {db.id}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {db.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {db.description}
-                    </p>
-                  )}
-
-                  {/* 統計情報 */}
-                  {stats && (
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">コンテンツ:</span>
-                        <span className="font-semibold">{stats.contentsCount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Markdownページ:</span>
-                        <span className="font-semibold">{stats.markdownPagesCount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">タグ:</span>
-                        <span className="font-semibold">{stats.tagsCount}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">ファイルサイズ:</span>
-                        <span className="font-semibold">{formatSize(stats.fileSize)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* メタ情報 */}
-                  <div className="space-y-1 text-xs text-muted-foreground border-t pt-3">
-                    <div>作成: {new Date(db.createdAt).toLocaleString("ja-JP")}</div>
-                    <div>更新: {new Date(db.updatedAt).toLocaleString("ja-JP")}</div>
-                    <div>サイズ: {formatSize(db.size)}</div>
+                <div className="px-6 pb-4">
+                  <div className="form-group">
+                    <label htmlFor="name" className="form-label">
+                      データベース名 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      className="form-input"
+                      placeholder="my-database"
+                      required
+                      disabled={isLoading}
+                    />
                   </div>
-
-                  {/* アクション */}
-                  <div className="flex gap-2 pt-3">
-                    {!db.isActive && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleSwitchDatabase(db.id)}
-                          disabled={isLoading}
-                          className="flex-1"
-                        >
-                          <HardDrive className="mr-2 h-4 w-4" />
-                          切り替え
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedDbForCopy(db.id);
-                            setCopyDb({
-                              targetId: `${db.id.replace('.db', '')}-copy`,
-                              name: `${db.name} のコピー`,
-                              description: db.description || "",
-                            });
-                            setIsCopyDialogOpen(true);
-                          }}
-                          disabled={isLoading}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteDatabase(db.id, db.name)}
-                          disabled={isLoading}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                    {db.isActive && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedDbForCopy(db.id);
-                          setCopyDb({
-                            targetId: `${db.id.replace('.db', '')}-backup`,
-                            name: `${db.name} のバックアップ`,
-                            description: `${new Date().toLocaleString("ja-JP")} のバックアップ`,
-                          });
-                          setIsCopyDialogOpen(true);
-                        }}
-                        disabled={isLoading}
-                        className="flex-1"
-                      >
-                        <Copy className="mr-2 h-4 w-4" />
-                        バックアップ作成
-                      </Button>
-                    )}
+                  <div className="form-group">
+                    <label htmlFor="description" className="form-label">
+                      説明
+                    </label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      className="form-textarea"
+                      placeholder="データベースの説明"
+                      rows={3}
+                      disabled={isLoading}
+                    />
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* データベースコピーダイアログ */}
-        <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>データベースをコピー</DialogTitle>
-              <DialogDescription>
-                既存のデータベースをバックアップまたは複製します
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>コピー元</Label>
-                <div className="font-mono text-sm mt-1">{selectedDbForCopy}</div>
-              </div>
-              <div>
-                <Label htmlFor="copy-target-id">コピー先ID（ファイル名）</Label>
-                <Input
-                  id="copy-target-id"
-                  placeholder="example-db-copy"
-                  value={copyDb.targetId}
-                  onChange={(e) =>
-                    setCopyDb({ ...copyDb, targetId: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="copy-name">表示名</Label>
-                <Input
-                  id="copy-name"
-                  placeholder="サンプルデータベース（コピー）"
-                  value={copyDb.name}
-                  onChange={(e) => setCopyDb({ ...copyDb, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="copy-desc">説明（任意）</Label>
-                <Textarea
-                  id="copy-desc"
-                  placeholder="バックアップの説明..."
-                  value={copyDb.description}
-                  onChange={(e) =>
-                    setCopyDb({ ...copyDb, description: e.target.value })
-                  }
-                />
-              </div>
+                </div>
+                <div className="px-6 pb-6 flex gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-secondary flex-1"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary flex-1"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "作成中..." : "作成"}
+                  </button>
+                </div>
+              </form>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsCopyDialogOpen(false)}
-                disabled={isLoading}
+          </div>
+        )}
+
+        {/* 編集ダイアログ */}
+        {isEditDialogOpen && editingDatabase && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="card mx-4 w-full max-w-lg animate-scale-in">
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  データベースを編集
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  データベースの情報を編集できます
+                </p>
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const data = {
+                    id: editingDatabase.id,
+                    name: formData.get("name") as string,
+                    description: formData.get("description") as string,
+                  };
+                  handleEditDatabase(data);
+                }}
               >
-                キャンセル
-              </Button>
-              <Button onClick={handleCopyDatabase} disabled={isLoading}>
-                コピー
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                <div className="px-6 pb-4">
+                  <div className="form-group">
+                    <label htmlFor="edit-name" className="form-label">
+                      データベース名 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="edit-name"
+                      name="name"
+                      type="text"
+                      className="form-input"
+                      defaultValue={editingDatabase.name}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-description" className="form-label">
+                      説明
+                    </label>
+                    <textarea
+                      id="edit-description"
+                      name="description"
+                      className="form-textarea"
+                      defaultValue={editingDatabase.description || ""}
+                      rows={3}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+                <div className="px-6 pb-6 flex gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-secondary flex-1"
+                    onClick={() => setIsEditDialogOpen(false)}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary flex-1"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "保存中..." : "保存"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {databases.length === 0 ? (
+          <div className="card p-12 text-center">
+            <p className="text-gray-600">
+              データベースがまだありません。新規作成ボタンから作成してください。
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {databases.map((database) => (
+              <button
+                key={database.id}
+                type="button"
+                className="card group text-left transition-all hover:shadow-medium"
+                onMouseOver={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 6px rgba(0, 0, 0, 0.1)";
+                }}
+                onMouseOut={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.boxShadow =
+                    "0 2px 4px rgba(0, 0, 0, 0.1)";
+                }}
+                onFocus={(e: React.FocusEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.boxShadow =
+                    "0 4px 6px rgba(0, 0, 0, 0.1)";
+                }}
+                onBlur={(e: React.FocusEvent<HTMLButtonElement>) => {
+                  e.currentTarget.style.boxShadow =
+                    "0 2px 4px rgba(0, 0, 0, 0.1)";
+                }}
+              >
+                <div className="p-6">
+                  <div className="mb-4 flex items-start justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                      {database.name}
+                    </h3>
+                    <div className="ml-2 flex-shrink-0">
+                      {database.isActive ? (
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                          アクティブ
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+                          非アクティブ
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mb-4 space-y-2">
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">ID:</span> {database.id}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">作成日:</span>{" "}
+                      {new Date(database.createdAt).toLocaleDateString(
+                        "ja-JP",
+                        {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        },
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">サイズ:</span>{" "}
+                      {(database.size / 1024).toFixed(1)} KB
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 line-clamp-2">
+                      {database.description || "説明はありません"}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      {database.updatedAt
+                        ? new Date(database.updatedAt).toLocaleDateString(
+                            "ja-JP",
+                          )
+                        : "未更新"}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-secondary text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditDialog(database);
+                        }}
+                      >
+                        ✏️ 編集
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDatabase(database.id);
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import Database from "better-sqlite3";
-import fs from "fs";
 
 // アクティブなデータベースを取得する関数
 function getActiveDbPath(): string {
@@ -22,7 +22,7 @@ function getActiveDbPath(): string {
 
 const dbPath = getActiveDbPath();
 const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+db.pragma("journal_mode = WAL");
 
 // ========== メインテーブル: contents ==========
 db.exec(`

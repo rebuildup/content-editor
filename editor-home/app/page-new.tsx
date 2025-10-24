@@ -1,19 +1,19 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import {
-  BarChart3,
-  Database,
-  Edit,
   FileText,
-  FolderOpen,
-  Image as ImageIcon,
   Plus,
+  Edit,
   Trash2,
+  Database,
+  Image as ImageIcon,
+  BarChart3,
+  FolderOpen,
   X,
 } from "lucide-react";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
 import { ContentForm } from "@/components/content-form";
+import Link from "next/link";
 import type { Content } from "@/types/content";
 
 interface DbStats {
@@ -162,13 +162,16 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-muted/30">
       {/* ヘッダー */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="container-tight py-8">
-          <div className="">
-            <div className="">
-              <h1>
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container-tight py-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-3xl font-bold tracking-tight">
                 コンテンツ管理
               </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                プロジェクト内のコンテンツを管理します
+              </p>
             </div>
             <button
               type="button"
@@ -183,10 +186,10 @@ export default function Home() {
       </header>
 
       {/* メインコンテンツ */}
-      <main className="container-tight py-12">
+      <main className="container-tight py-8">
         {/* 統計情報 */}
         {dbStats && (
-          <section className="mb-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
             <div className="card stat-card">
               <BarChart3 className="h-5 w-5 text-muted-foreground mb-3" />
               <div className="stat-value">{dbStats.totalContents || 0}</div>
@@ -211,12 +214,12 @@ export default function Home() {
               </div>
               <div className="stat-label">アクティブ</div>
             </div>
-          </section>
+          </div>
         )}
 
         {/* ナビゲーション */}
-        <nav className="mb-20">
-          <div className="flex flex-wrap gap-3">
+        <nav className="mb-8">
+          <div className="flex gap-3 flex-wrap">
             <Link href="/markdown" className="btn btn-secondary">
               <FileText className="h-4 w-4" />
               Markdownページ
@@ -233,9 +236,8 @@ export default function Home() {
         </nav>
 
         {/* コンテンツ一覧 */}
-        <section>
         {contents.length === 0 ? (
-          <div className="card p-16 text-center">
+          <div className="card p-12 text-center">
             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">
               コンテンツがありません
@@ -253,7 +255,7 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {contents.map((content) => (
               <article
                 key={content.id}
@@ -276,14 +278,17 @@ export default function Home() {
                     {content.id}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">作成日:</span>{" "}
-                    {new Date(
-                      content.createdAt || new Date(),
-                    ).toLocaleDateString("ja-JP", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    <span className="font-medium text-foreground">
+                      作成日:
+                    </span>{" "}
+                    {new Date(content.createdAt || new Date()).toLocaleDateString(
+                      "ja-JP",
+                      {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      },
+                    )}
                   </div>
                   {content.tags && content.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
@@ -328,27 +333,17 @@ export default function Home() {
             ))}
           </div>
         )}
-        </section>
       </main>
 
       {/* 作成ダイアログ */}
       {isCreateDialogOpen && (
         <div
-          role="dialog"
-          aria-modal="true"
           className="dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
           onClick={() => setIsCreateDialogOpen(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setIsCreateDialogOpen(false);
-            }
-          }}
         >
           <div
-            role="document"
             className="dialog-content max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="dialog-header">
               <div className="flex items-start justify-between">
@@ -367,12 +362,7 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            <ContentForm
-              mode="create"
-              onSubmit={handleCreateContent}
-              onCancel={() => setIsCreateDialogOpen(false)}
-              isLoading={isLoading}
-            />
+            <ContentForm mode="create" onSubmit={handleCreateContent} />
             <div className="dialog-footer">
               <button
                 type="button"
@@ -390,25 +380,15 @@ export default function Home() {
       {/* 編集ダイアログ */}
       {isEditDialogOpen && editingContent && (
         <div
-          role="dialog"
-          aria-modal="true"
           className="dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
           onClick={() => {
             setIsEditDialogOpen(false);
             setEditingContent(null);
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setIsEditDialogOpen(false);
-              setEditingContent(null);
-            }
-          }}
         >
           <div
-            role="document"
             className="dialog-content max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
           >
             <div className="dialog-header">
               <div className="flex items-start justify-between">
@@ -434,11 +414,6 @@ export default function Home() {
               mode="edit"
               initialData={editingContent}
               onSubmit={handleEditContent}
-              onCancel={() => {
-                setIsEditDialogOpen(false);
-                setEditingContent(null);
-              }}
-              isLoading={isLoading}
             />
             <div className="dialog-footer">
               <button
@@ -459,3 +434,4 @@ export default function Home() {
     </div>
   );
 }
+

@@ -7,27 +7,28 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "build:native": "node scripts/build-native.js",
+    "postinstall": "node scripts/install-hooks.js",
+    "preinstall": "echo 'Installing dependencies...'",
+    "install": "node scripts/install-hooks.js",
+    "prebuild": "node scripts/install-hooks.js",
+    "postbuild": "node scripts/install-hooks.js"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-label": "^2.1.7",
-    "@radix-ui/react-slot": "^1.2.3",
     "better-sqlite3": "11.8.1",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "lucide-react": "^0.547.0",
     "next": "16.0.0",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^4.1.16"
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "tailwindcss": "^4.0.0",
     "typescript": "^5"
   }
 }
