@@ -2,6 +2,16 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Divider,
+  IconButton,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 interface MediaUploadFormProps {
   onSubmit: (formData: FormData) => void;
@@ -27,7 +37,6 @@ export function MediaUploadForm({
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      // プレビュー画像の生成
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviewUrl(reader.result as string);
@@ -64,161 +73,134 @@ export function MediaUploadForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-4">
-        <div className="form-group">
-          <label htmlFor="contentId" className="form-label">
-            コンテンツID <span style={{ color: "red" }}>*</span>
-          </label>
-          <input
-            id="contentId"
-            type="text"
-            className="form-input"
-            value={selectedContentId}
-            onChange={(e) => setSelectedContentId(e.target.value)}
-            placeholder="apple01"
-            required
-            disabled={isLoading}
-          />
-          <p className="text-xs text-gray-500">
-            このメディアを関連付けるコンテンツのID
-          </p>
-        </div>
+    <Box component="form" onSubmit={handleSubmit} sx={{ pt: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <TextField
+          label="コンテンツID"
+          required
+          value={selectedContentId}
+          onChange={(e) => setSelectedContentId(e.target.value)}
+          placeholder="apple01"
+          disabled={isLoading}
+          helperText="このメディアを関連付けるコンテンツのID"
+        />
 
-        <hr />
+        <Divider />
 
-        <div className="form-group">
-          <label htmlFor="file" className="form-label">
+        <Box>
+          <Typography variant="subtitle2" gutterBottom>
             ファイル <span style={{ color: "red" }}>*</span>
-          </label>
-          <div
-            className="d-flex"
-            style={{ gap: "0.5rem", alignItems: "center" }}
-          >
-            <input
-              id="file"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+            <Button
+              variant="outlined"
+              component="label"
               disabled={isLoading}
-              className="form-input"
-              style={{ flex: 1 }}
-            />
+              sx={{ flex: 1 }}
+            >
+              ファイルを選択
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isLoading}
+                hidden
+              />
+            </Button>
             {file && (
-              <button
-                type="button"
-                className="btn btn-secondary"
+              <IconButton
                 onClick={clearFile}
                 disabled={isLoading}
-                style={{ padding: "0.5rem" }}
+                color="error"
               >
                 ×
-              </button>
+              </IconButton>
             )}
-          </div>
+          </Box>
           {file && (
-            <p className="text-xs text-gray-500">
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
               選択済み: {file.name} ({(file.size / 1024).toFixed(2)} KB)
-            </p>
+            </Typography>
           )}
-        </div>
+        </Box>
 
         {previewUrl && (
-          <div className="form-group">
-            <label htmlFor="preview" className="form-label">
-              プレビュー
-            </label>
-            <div
-              style={{
-                border: "1px solid #e9ecef",
-                borderRadius: "0.5rem",
-                padding: "1rem",
-                backgroundColor: "#f8f9fa",
-              }}
-            >
-              <Image
-                src={previewUrl}
-                alt="Preview"
-                width={400}
-                height={256}
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "16rem",
-                  margin: "0 auto",
-                  borderRadius: "0.25rem",
-                  display: "block",
+          <Card variant="outlined">
+            <CardContent>
+              <Typography variant="subtitle2" gutterBottom>
+                プレビュー
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  bgcolor: "grey.50",
+                  p: 2,
+                  borderRadius: 1,
                 }}
-              />
-            </div>
-          </div>
+              >
+                <Image
+                  src={previewUrl}
+                  alt="Preview"
+                  width={400}
+                  height={256}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "16rem",
+                    objectFit: "contain",
+                    borderRadius: 4,
+                  }}
+                />
+              </Box>
+            </CardContent>
+          </Card>
         )}
 
-        <hr />
+        <Divider />
 
-        <div className="form-group">
-          <label htmlFor="alt" className="form-label">
-            代替テキスト（Alt）
-          </label>
-          <input
-            id="alt"
-            type="text"
-            className="form-input"
-            value={alt}
-            onChange={(e) => setAlt(e.target.value)}
-            placeholder="画像の説明"
-            disabled={isLoading}
-          />
-          <p className="text-xs text-gray-500">
-            アクセシビリティのための画像説明
-          </p>
-        </div>
+        <TextField
+          label="代替テキスト（Alt）"
+          value={alt}
+          onChange={(e) => setAlt(e.target.value)}
+          placeholder="画像の説明"
+          disabled={isLoading}
+          helperText="アクセシビリティのための画像説明"
+        />
 
-        <div className="form-group">
-          <label htmlFor="description" className="form-label">
-            説明
-          </label>
-          <textarea
-            id="description"
-            className="form-textarea"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="メディアの詳細な説明"
-            rows={3}
-            disabled={isLoading}
-          />
-        </div>
+        <TextField
+          label="説明"
+          multiline
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="メディアの詳細な説明"
+          disabled={isLoading}
+        />
 
-        <div className="form-group">
-          <label htmlFor="tags" className="form-label">
-            タグ（カンマ区切り）
-          </label>
-          <input
-            id="tags"
-            type="text"
-            className="form-input"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="tag1, tag2, tag3"
-            disabled={isLoading}
-          />
-        </div>
-      </div>
+        <TextField
+          label="タグ（カンマ区切り）"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
+          placeholder="tag1, tag2, tag3"
+          disabled={isLoading}
+        />
+      </Box>
 
-      <hr />
+      <Divider sx={{ my: 3 }} />
 
-      <div className="d-flex justify-content-end" style={{ gap: "0.5rem" }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+        <Button
+          variant="outlined"
           onClick={onCancel}
           disabled={isLoading}
         >
           キャンセル
-        </button>
-        <button type="submit" className="btn" disabled={isLoading}>
+        </Button>
+        <Button type="submit" variant="contained" disabled={isLoading}>
           {isLoading ? "アップロード中..." : "アップロード"}
-        </button>
-      </div>
-    </form>
+        </Button>
+      </Box>
+    </Box>
   );
 }

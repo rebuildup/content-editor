@@ -3,6 +3,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { MarkdownForm } from "@/components/markdown-form";
 import type { MarkdownPage } from "@/types/markdown";
+import Link from "next/link";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Typography,
+} from "@mui/material";
+import Grid2 from "../components/Grid2";
 
 interface MarkdownStats {
   characterCount: number;
@@ -23,12 +38,10 @@ export default function MarkdownEditorPage() {
   const [currentStats, setCurrentStats] = useState<MarkdownStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // ページ一覧を取得
   const fetchPages = useCallback(async () => {
     try {
       const response = await fetch("/api/markdown");
       const data = await response.json();
-      // データが配列でない場合は空配列を設定
       setPages(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch markdown pages:", error);
@@ -40,7 +53,6 @@ export default function MarkdownEditorPage() {
     fetchPages();
   }, [fetchPages]);
 
-  // 新規ページ作成
   const handleCreatePage = async (data: Partial<MarkdownPage>) => {
     setIsLoading(true);
     try {
@@ -67,7 +79,6 @@ export default function MarkdownEditorPage() {
     }
   };
 
-  // ページ編集
   const handleEditPage = async (data: Partial<MarkdownPage>) => {
     setIsLoading(true);
     try {
@@ -95,7 +106,6 @@ export default function MarkdownEditorPage() {
     }
   };
 
-  // ページ削除
   const handleDeletePage = async (id: string) => {
     if (!confirm("このページを削除してもよろしいですか？")) {
       return;
@@ -115,7 +125,6 @@ export default function MarkdownEditorPage() {
     }
   };
 
-  // 統計情報を取得
   const fetchStats = async (id: string) => {
     try {
       const response = await fetch(`/api/markdown/stats?id=${id}`);
@@ -128,292 +137,363 @@ export default function MarkdownEditorPage() {
     }
   };
 
-  // 編集ダイアログを開く
   const openEditDialog = (page: MarkdownPage) => {
     setEditingPage({ ...page });
     setIsEditDialogOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl">
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", lg: "row" },
+              justifyContent: "space-between",
+              alignItems: { xs: "flex-start", lg: "flex-start" },
+              gap: 3,
+            }}
+          >
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h3" component="h1" gutterBottom>
                 Markdownページ管理
-              </h1>
-              <p className="mt-2 text-lg text-gray-600">
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
                 プロジェクト内のMarkdownページを管理します
-              </p>
+              </Typography>
 
-              {/* ナビゲーションリンク */}
-              <div className="mt-6 flex flex-wrap gap-4">
-                <a
-                  href="/"
-                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
-                >
+              <Box sx={{ mt: 3, display: "flex", flexWrap: "wrap", gap: 2 }}>
+                <Button component={Link} href="/" variant="outlined">
                   ← コンテンツ管理
-                </a>
-                <a
-                  href="/media"
-                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
-                >
+                </Button>
+                <Button component={Link} href="/media" variant="outlined">
                   → メディア管理
-                </a>
-                <a
-                  href="/databases"
-                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
-                >
+                </Button>
+                <Button component={Link} href="/databases" variant="outlined">
                   → データベース管理
-                </a>
-              </div>
-            </div>
-            <div className="flex-shrink-0">
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
+                </Button>
+              </Box>
+            </Box>
+            <Box sx={{ flexShrink: 0 }}>
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ minWidth: { xs: "100%", sm: "auto" } }}
                 onClick={() => setIsCreateDialogOpen(true)}
               >
                 ➕ 新規作成
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 作成ダイアログ */}
-        {isCreateDialogOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="card mx-4 w-full max-w-4xl animate-scale-in">
-              <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  新しいMarkdownページを作成
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  ページの基本情報を入力してください
-                </p>
-              </div>
-              <MarkdownForm
-                mode="create"
-                onSubmit={handleCreatePage}
-                onCancel={() => setIsCreateDialogOpen(false)}
-                isLoading={isLoading}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 編集ダイアログ */}
-        {isEditDialogOpen && editingPage && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="card mx-4 w-full max-w-4xl animate-scale-in">
-              <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Markdownページを編集
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  ページの情報を編集できます
-                </p>
-              </div>
-              <MarkdownForm
-                mode="edit"
-                initialData={editingPage}
-                onSubmit={handleEditPage}
-                onCancel={() => setIsEditDialogOpen(false)}
-                isLoading={isLoading}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 統計ダイアログ */}
-        {isStatsDialogOpen && currentStats && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="card mx-4 w-full max-w-2xl animate-scale-in">
-              <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  ページ統計
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  このページの詳細な統計情報
-                </p>
-              </div>
-              <div className="px-6 pb-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {currentStats.characterCount}
-                    </div>
-                    <div className="text-sm text-gray-600">文字数</div>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {currentStats.wordCount}
-                    </div>
-                    <div className="text-sm text-gray-600">単語数</div>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {currentStats.lineCount}
-                    </div>
-                    <div className="text-sm text-gray-600">行数</div>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {currentStats.headingCount}
-                    </div>
-                    <div className="text-sm text-gray-600">見出し数</div>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {currentStats.linkCount}
-                    </div>
-                    <div className="text-sm text-gray-600">リンク数</div>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 p-4">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {currentStats.imageCount}
-                    </div>
-                    <div className="text-sm text-gray-600">画像数</div>
-                  </div>
-                  <div className="col-span-full rounded-lg bg-gray-50 p-4">
-                    <div className="text-2xl font-bold text-primary-600">
-                      {currentStats.readingTime} 分
-                    </div>
-                    <div className="text-sm text-gray-600">推定読書時間</div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 pb-6">
-                <button
-                  type="button"
-                  className="btn btn-secondary w-full"
-                  onClick={() => setIsStatsDialogOpen(false)}
-                >
-                  閉じる
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+              </Button>
+            </Box>
+          </Box>
+        </Box>
 
         {pages.length === 0 ? (
-          <div className="card p-12 text-center">
-            <p className="text-gray-600">
-              Markdownページがまだありません。新規作成ボタンから作成してください。
-            </p>
-          </div>
+          <Card>
+            <CardContent sx={{ p: 6, textAlign: "center" }}>
+              <Typography variant="body1" color="text.secondary">
+                Markdownページがまだありません。新規作成ボタンから作成してください。
+              </Typography>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Grid2 container spacing={3}>
             {pages.map((page) => (
-              <button
-                key={page.id}
-                type="button"
-                className="card group text-left transition-all hover:shadow-medium"
-                onMouseOver={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 6px rgba(0, 0, 0, 0.1)";
-                }}
-                onMouseOut={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 4px rgba(0, 0, 0, 0.1)";
-                }}
-                onFocus={(e: React.FocusEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 6px rgba(0, 0, 0, 0.1)";
-                }}
-                onBlur={(e: React.FocusEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 4px rgba(0, 0, 0, 0.1)";
-                }}
-              >
-                <div className="p-6">
-                  <div className="mb-4 flex items-start justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {page.frontmatter?.title || page.slug}
-                    </h3>
-                    <div className="ml-2 flex-shrink-0">
-                      <span className="inline-flex items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-medium text-primary-800">
-                        {String(page.frontmatter?.status ?? "draft")}
-                      </span>
-                    </div>
-                  </div>
+              <Grid2 xs={12} sm={6} lg={4} key={page.id}>
+                <Card
+                  sx={{
+                    height: "100%",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      boxShadow: 4,
+                    },
+                  }}
+                >
+                  <CardContent>
+                    <Box
+                      sx={{
+                        mb: 2,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        component="h3"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {page.frontmatter?.title || page.slug}
+                      </Typography>
+                      <Box sx={{ ml: 1, flexShrink: 0 }}>
+                        <Chip
+                          label={String(page.frontmatter?.status ?? "draft")}
+                          color="primary"
+                          size="small"
+                        />
+                      </Box>
+                    </Box>
 
-                  <div className="mb-4 space-y-2">
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">スラッグ:</span> {page.slug}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">作成日:</span>{" "}
-                      {new Date(page.createdAt).toLocaleDateString("ja-JP", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </div>
-                    {page.frontmatter?.tags &&
-                      page.frontmatter.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {page.frontmatter.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                          {page.frontmatter.tags.length > 3 && (
-                            <span className="text-xs text-gray-500">
-                              +{page.frontmatter.tags.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
-                  </div>
+                    <Box
+                      sx={{
+                        mb: 2,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>スラッグ:</strong> {page.slug}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>作成日:</strong>{" "}
+                        {new Date(page.createdAt).toLocaleDateString("ja-JP", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </Typography>
+                      {page.frontmatter?.tags &&
+                        page.frontmatter.tags.length > 0 && (
+                          <Box
+                            sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}
+                          >
+                            {page.frontmatter.tags.slice(0, 3).map((tag) => (
+                              <Chip
+                                key={tag}
+                                label={tag}
+                                size="small"
+                                variant="outlined"
+                              />
+                            ))}
+                            {page.frontmatter.tags.length > 3 && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                +{page.frontmatter.tags.length - 3} more
+                              </Typography>
+                            )}
+                          </Box>
+                        )}
+                    </Box>
 
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
-                      {page.body?.length || 0} 文字
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-secondary text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          fetchStats(page.id);
-                        }}
-                      >
-                        📊
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary text-xs flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(page);
-                        }}
-                      >
-                        ✏️ 編集
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeletePage(page.id);
-                        }}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </button>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        {page.body?.length || 0} 文字
+                      </Typography>
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fetchStats(page.id);
+                          }}
+                        >
+                          📊
+                        </IconButton>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(page);
+                          }}
+                        >
+                          ✏️ 編集
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePage(page.id);
+                          }}
+                        >
+                          🗑️
+                        </Button>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid2>
             ))}
-          </div>
+          </Grid2>
         )}
-      </div>
-    </div>
+      </Container>
+
+      <Dialog
+        open={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6">新しいMarkdownページを作成</Typography>
+          <Typography variant="body2" color="text.secondary">
+            ページの基本情報を入力してください
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <MarkdownForm
+            mode="create"
+            onSubmit={handleCreatePage}
+            onCancel={() => setIsCreateDialogOpen(false)}
+            isLoading={isLoading}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6">Markdownページを編集</Typography>
+          <Typography variant="body2" color="text.secondary">
+            ページの情報を編集できます
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {editingPage && (
+            <MarkdownForm
+              mode="edit"
+              initialData={editingPage}
+              onSubmit={handleEditPage}
+              onCancel={() => setIsEditDialogOpen(false)}
+              isLoading={isLoading}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isStatsDialogOpen}
+        onClose={() => setIsStatsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6">ページ統計</Typography>
+          <Typography variant="body2" color="text.secondary">
+            このページの詳細な統計情報
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {currentStats && (
+            <Grid2 container spacing={2} sx={{ mt: 1 }}>
+              <Grid2 xs={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {currentStats.characterCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      文字数
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid2>
+              <Grid2 xs={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {currentStats.wordCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      単語数
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid2>
+              <Grid2 xs={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {currentStats.lineCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      行数
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid2>
+              <Grid2 xs={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {currentStats.headingCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      見出し数
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid2>
+              <Grid2 xs={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {currentStats.linkCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      リンク数
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid2>
+              <Grid2 xs={6}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {currentStats.imageCount}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      画像数
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid2>
+              <Grid2 xs={12}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h4" color="primary" gutterBottom>
+                      {currentStats.readingTime} 分
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      推定読書時間
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid2>
+            </Grid2>
+          )}
+          <Box sx={{ mt: 3 }}>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => setIsStatsDialogOpen(false)}
+            >
+              閉じる
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
+    </Box>
   );
 }

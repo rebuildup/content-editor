@@ -1,6 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Typography,
+} from "@mui/material";
+import Grid2 from "../components/Grid2";
 
 interface DatabaseInfo {
   id: string;
@@ -29,12 +45,10 @@ export default function DatabasesPage() {
   );
   const [isLoading, setIsLoading] = useState(false);
 
-  // データベース一覧を取得
   const fetchDatabases = useCallback(async () => {
     try {
       const response = await fetch("/api/databases");
       const data = await response.json();
-      // データが配列でない場合は空配列を設定
       setDatabases(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch databases:", error);
@@ -42,7 +56,6 @@ export default function DatabasesPage() {
     }
   }, []);
 
-  // 統計情報を取得
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch("/api/databases/stats");
@@ -58,7 +71,6 @@ export default function DatabasesPage() {
     fetchStats();
   }, [fetchDatabases, fetchStats]);
 
-  // 新しいデータベースを作成
   const handleCreateDatabase = async (data: Partial<DatabaseInfo>) => {
     setIsLoading(true);
     try {
@@ -88,7 +100,6 @@ export default function DatabasesPage() {
     }
   };
 
-  // データベースを編集
   const handleEditDatabase = async (data: Partial<DatabaseInfo>) => {
     setIsLoading(true);
     try {
@@ -119,7 +130,6 @@ export default function DatabasesPage() {
     }
   };
 
-  // データベースを削除
   const handleDeleteDatabase = async (id: string) => {
     if (!confirm("このデータベースを削除してもよろしいですか？")) {
       return;
@@ -140,103 +150,260 @@ export default function DatabasesPage() {
     }
   };
 
-  // 編集ダイアログを開く
   const openEditDialog = (database: DatabaseInfo) => {
     setEditingDatabase({ ...database });
     setIsEditDialogOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl">
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ mb: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", lg: "row" },
+              justifyContent: "space-between",
+              alignItems: { xs: "flex-start", lg: "flex-start" },
+              gap: 3,
+            }}
+          >
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h3" component="h1" gutterBottom>
                 データベース管理
-              </h1>
-              <p className="mt-2 text-lg text-gray-600">
+              </Typography>
+              <Typography variant="body1" color="text.secondary" paragraph>
                 プロジェクト内のデータベースファイルを管理します
-              </p>
+              </Typography>
 
-              {/* 統計情報をカード形式で表示 */}
               {stats && (
-                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="card p-6">
-                    <div className="text-3xl font-bold text-primary-600">
+                <Grid2 container spacing={2} sx={{ mt: 3 }}>
+                  <Grid2 xs={6} sm={3}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="h4" color="primary" gutterBottom>
                       {stats.contentsCount}
-                    </div>
-                    <div className="text-sm text-gray-600">コンテンツ数</div>
-                  </div>
-                  <div className="card p-6">
-                    <div className="text-3xl font-bold text-primary-600">
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          コンテンツ数
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid2>
+                  <Grid2 xs={6} sm={3}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="h4" color="primary" gutterBottom>
                       {stats.markdownPagesCount}
-                    </div>
-                    <div className="text-sm text-gray-600">
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
                       Markdownページ数
-                    </div>
-                  </div>
-                  <div className="card p-6">
-                    <div className="text-3xl font-bold text-primary-600">
-                      {stats.tagsCount}
-                    </div>
-                    <div className="text-sm text-gray-600">タグ数</div>
-                  </div>
-                  <div className="card p-6">
-                    <div className="text-3xl font-bold text-primary-600">
-                      {(stats.fileSize / 1024).toFixed(1)} KB
-                    </div>
-                    <div className="text-sm text-gray-600">合計サイズ</div>
-                  </div>
-                </div>
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid2>
+                  <Grid2 xs={6} sm={3}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="h4" color="primary" gutterBottom>
+                          {stats.tagsCount}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          タグ数
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid2>
+                  <Grid2 xs={6} sm={3}>
+                    <Card>
+                      <CardContent>
+                        <Typography variant="h4" color="primary" gutterBottom>
+                          {(stats.fileSize / 1024).toFixed(1)} KB
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          合計サイズ
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid2>
+                </Grid2>
               )}
 
-              {/* ナビゲーションリンク */}
-              <div className="mt-6 flex flex-wrap gap-4">
-                <a
-                  href="/"
-                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
-                >
+              <Box sx={{ mt: 3, display: "flex", flexWrap: "wrap", gap: 2 }}>
+                <Button component={Link} href="/" variant="outlined">
                   ← コンテンツ管理
-                </a>
-                <a
-                  href="/markdown"
-                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
-                >
+                </Button>
+                <Button component={Link} href="/markdown" variant="outlined">
                   → Markdown管理
-                </a>
-                <a
-                  href="/media"
-                  className="inline-flex items-center gap-2 rounded-lg bg-secondary-100 px-4 py-2 text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-200 focus:bg-secondary-200"
-                >
+                </Button>
+                <Button component={Link} href="/media" variant="outlined">
                   → メディア管理
-                </a>
-              </div>
-            </div>
-            <div className="flex-shrink-0">
-              <button
-                type="button"
-                className="btn btn-primary w-full sm:w-auto"
+                </Button>
+              </Box>
+            </Box>
+            <Box sx={{ flexShrink: 0 }}>
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ minWidth: { xs: "100%", sm: "auto" } }}
                 onClick={() => setIsCreateDialogOpen(true)}
               >
                 ➕ 新規作成
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </Box>
+          </Box>
+        </Box>
 
-        {/* 作成ダイアログ */}
-        {isCreateDialogOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="card mx-4 w-full max-w-lg animate-scale-in">
-              <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  新しいデータベースを作成
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  データベースの基本情報を入力してください
-                </p>
-              </div>
+        {databases.length === 0 ? (
+          <Card>
+            <CardContent sx={{ p: 6, textAlign: "center" }}>
+              <Typography variant="body1" color="text.secondary">
+                データベースがまだありません。新規作成ボタンから作成してください。
+              </Typography>
+            </CardContent>
+          </Card>
+        ) : (
+          <Grid2 container spacing={3}>
+            {databases.map((database) => (
+              <Grid2 xs={12} sm={6} lg={4} key={database.id}>
+                <Card
+                  sx={{
+                    height: "100%",
+                    transition: "all 0.2s",
+                    "&:hover": {
+                      boxShadow: 4,
+                    },
+                  }}
+                >
+                  <CardContent>
+                    <Box
+                      sx={{
+                        mb: 2,
+                        display: "flex",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        component="h3"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {database.name}
+                      </Typography>
+                      <Box sx={{ ml: 1, flexShrink: 0 }}>
+                        {database.isActive ? (
+                          <Chip
+                            label="アクティブ"
+                            color="success"
+                            size="small"
+                          />
+                        ) : (
+                          <Chip
+                            label="非アクティブ"
+                            color="default"
+                            size="small"
+                          />
+                        )}
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mb: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>ID:</strong> {database.id}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>作成日:</strong>{" "}
+                        {new Date(database.createdAt).toLocaleDateString(
+                          "ja-JP",
+                          {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          },
+                        )}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>サイズ:</strong>{" "}
+                        {(database.size / 1024).toFixed(1)} KB
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ mb: 2 }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {database.description || "説明はありません"}
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Typography variant="caption" color="text.secondary">
+                        {database.updatedAt
+                          ? new Date(database.updatedAt).toLocaleDateString(
+                              "ja-JP",
+                            )
+                          : "未更新"}
+                      </Typography>
+                      <Box sx={{ display: "flex", gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(database);
+                          }}
+                        >
+                          ✏️ 編集
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDatabase(database.id);
+                          }}
+                        >
+                          🗑️
+                        </Button>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid2>
+            ))}
+          </Grid2>
+        )}
+      </Container>
+
+      <Dialog
+        open={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>新しいデータベースを作成</DialogTitle>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -248,68 +415,52 @@ export default function DatabasesPage() {
                   handleCreateDatabase(data);
                 }}
               >
-                <div className="px-6 pb-4">
-                  <div className="form-group">
-                    <label htmlFor="name" className="form-label">
-                      データベース名 <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="name"
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              データベースの基本情報を入力してください
+            </Typography>
+            <TextField
                       name="name"
-                      type="text"
-                      className="form-input"
-                      placeholder="my-database"
+              label="データベース名"
+              fullWidth
                       required
                       disabled={isLoading}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="description" className="form-label">
-                      説明
-                    </label>
-                    <textarea
-                      id="description"
+              placeholder="my-database"
+              sx={{ mb: 2 }}
+            />
+            <TextField
                       name="description"
-                      className="form-textarea"
-                      placeholder="データベースの説明"
+              label="説明"
+              fullWidth
+              multiline
                       rows={3}
                       disabled={isLoading}
-                    />
-                  </div>
-                </div>
-                <div className="px-6 pb-6 flex gap-3">
-                  <button
-                    type="button"
-                    className="btn btn-secondary flex-1"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
+              placeholder="データベースの説明"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsCreateDialogOpen(false)}>
                     キャンセル
-                  </button>
-                  <button
+            </Button>
+            <Button
                     type="submit"
-                    className="btn btn-primary flex-1"
+              variant="contained"
                     disabled={isLoading}
                   >
                     {isLoading ? "作成中..." : "作成"}
-                  </button>
-                </div>
+            </Button>
+          </DialogActions>
               </form>
-            </div>
-          </div>
-        )}
+      </Dialog>
 
-        {/* 編集ダイアログ */}
-        {isEditDialogOpen && editingDatabase && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="card mx-4 w-full max-w-lg animate-scale-in">
-              <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  データベースを編集
-                </h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  データベースの情報を編集できます
-                </p>
-              </div>
+      <Dialog
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>データベースを編集</DialogTitle>
+        {editingDatabase && (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -322,168 +473,44 @@ export default function DatabasesPage() {
                   handleEditDatabase(data);
                 }}
               >
-                <div className="px-6 pb-4">
-                  <div className="form-group">
-                    <label htmlFor="edit-name" className="form-label">
-                      データベース名 <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="edit-name"
+            <DialogContent>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                データベースの情報を編集できます
+              </Typography>
+              <TextField
                       name="name"
-                      type="text"
-                      className="form-input"
+                label="データベース名"
+                fullWidth
+                required
                       defaultValue={editingDatabase.name}
-                      required
                       disabled={isLoading}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="edit-description" className="form-label">
-                      説明
-                    </label>
-                    <textarea
-                      id="edit-description"
+                sx={{ mb: 2 }}
+              />
+              <TextField
                       name="description"
-                      className="form-textarea"
+                label="説明"
+                fullWidth
+                multiline
+                rows={3}
                       defaultValue={editingDatabase.description || ""}
-                      rows={3}
                       disabled={isLoading}
                     />
-                  </div>
-                </div>
-                <div className="px-6 pb-6 flex gap-3">
-                  <button
-                    type="button"
-                    className="btn btn-secondary flex-1"
-                    onClick={() => setIsEditDialogOpen(false)}
-                  >
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setIsEditDialogOpen(false)}>
                     キャンセル
-                  </button>
-                  <button
+              </Button>
+              <Button
                     type="submit"
-                    className="btn btn-primary flex-1"
+                variant="contained"
                     disabled={isLoading}
                   >
                     {isLoading ? "保存中..." : "保存"}
-                  </button>
-                </div>
+              </Button>
+            </DialogActions>
               </form>
-            </div>
-          </div>
         )}
-
-        {databases.length === 0 ? (
-          <div className="card p-12 text-center">
-            <p className="text-gray-600">
-              データベースがまだありません。新規作成ボタンから作成してください。
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {databases.map((database) => (
-              <button
-                key={database.id}
-                type="button"
-                className="card group text-left transition-all hover:shadow-medium"
-                onMouseOver={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 6px rgba(0, 0, 0, 0.1)";
-                }}
-                onMouseOut={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 4px rgba(0, 0, 0, 0.1)";
-                }}
-                onFocus={(e: React.FocusEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 6px rgba(0, 0, 0, 0.1)";
-                }}
-                onBlur={(e: React.FocusEvent<HTMLButtonElement>) => {
-                  e.currentTarget.style.boxShadow =
-                    "0 2px 4px rgba(0, 0, 0, 0.1)";
-                }}
-              >
-                <div className="p-6">
-                  <div className="mb-4 flex items-start justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {database.name}
-                    </h3>
-                    <div className="ml-2 flex-shrink-0">
-                      {database.isActive ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                          アクティブ
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-                          非アクティブ
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mb-4 space-y-2">
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">ID:</span> {database.id}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">作成日:</span>{" "}
-                      {new Date(database.createdAt).toLocaleDateString(
-                        "ja-JP",
-                        {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        },
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">サイズ:</span>{" "}
-                      {(database.size / 1024).toFixed(1)} KB
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {database.description || "説明はありません"}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-500">
-                      {database.updatedAt
-                        ? new Date(database.updatedAt).toLocaleDateString(
-                            "ja-JP",
-                          )
-                        : "未更新"}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className="btn btn-secondary text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditDialog(database);
-                        }}
-                      >
-                        ✏️ 編集
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-danger text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteDatabase(database.id);
-                        }}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      </Dialog>
+    </Box>
   );
 }

@@ -2,6 +2,20 @@
 
 import { useState } from "react";
 import type { MarkdownPage } from "@/types/markdown";
+import {
+  Box,
+  Button,
+  Divider,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+} from "@mui/material";
+import Grid2 from "../app/components/Grid2";
 
 interface MarkdownFormProps {
   initialData?: Partial<MarkdownPage>;
@@ -35,7 +49,7 @@ export function MarkdownForm({
     ...initialData,
   });
 
-  const [activeTab, setActiveTab] = useState("content");
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,159 +70,96 @@ export function MarkdownForm({
   };
 
   const tabs = [
-    { id: "content", label: "コンテンツ" },
-    { id: "frontmatter", label: "フロントマター" },
-    { id: "settings", label: "設定" },
+    { label: "コンテンツ" },
+    { label: "フロントマター" },
+    { label: "設定" },
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* タブナビゲーション */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+    <Box component="form" onSubmit={handleSubmit} sx={{ pt: 2 }}>
+      <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+        {tabs.map((tab, index) => (
+          <Tab key={index} label={tab.label} />
+        ))}
+      </Tabs>
 
-      {/* コンテンツタブ */}
-      {activeTab === "content" && (
-        <div className="space-y-4">
-          {mode === "create" && (
-            <div className="form-group">
-              <label htmlFor="id" className="form-label">
-                ページID <span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                id="id"
-                type="text"
-                className="form-input"
+      <Box sx={{ mt: 3 }}>
+        {activeTab === 0 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {mode === "create" && (
+              <TextField
+                label="ページID"
+                required
                 value={formData.id}
                 onChange={(e) =>
                   setFormData({ ...formData, id: e.target.value })
                 }
                 placeholder="my-page-001"
-                required
                 disabled={isLoading}
               />
-            </div>
-          )}
+            )}
 
-          <div className="form-group">
-            <label htmlFor="slug" className="form-label">
-              スラッグ <span style={{ color: "red" }}>*</span>
-            </label>
-            <input
-              id="slug"
-              type="text"
-              className="form-input"
+            <TextField
+              label="スラッグ"
+              required
               value={formData.slug}
               onChange={(e) =>
                 setFormData({ ...formData, slug: e.target.value })
               }
               placeholder="my-page-slug"
-              required
               disabled={isLoading}
+              helperText="URL用のスラッグ（例: /blog/my-page-slug）"
             />
-            <p className="text-xs text-gray-500">
-              URL用のスラッグ（例: /blog/my-page-slug）
-            </p>
-          </div>
 
-          <hr />
+            <Divider />
 
-          <div className="form-group">
-            <label htmlFor="body" className="form-label">
-              Markdown本文 <span style={{ color: "red" }}>*</span>
-            </label>
-            <textarea
-              id="body"
-              className="form-textarea"
+            <TextField
+              label="Markdown本文"
+              required
+              multiline
+              rows={20}
               value={formData.body}
               onChange={(e) =>
                 setFormData({ ...formData, body: e.target.value })
               }
-              placeholder="# タイトル&#10;&#10;ここにMarkdown形式で本文を書きます..."
-              rows={20}
-              required
+              placeholder="# タイトル\n\nここにMarkdown形式で本文を書きます..."
               disabled={isLoading}
-              style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+              helperText="Markdown記法で記述してください"
+              sx={{ fontFamily: "monospace" }}
             />
-            <p className="text-xs text-gray-500">
-              Markdown記法で記述してください
-            </p>
-          </div>
-        </div>
-      )}
+          </Box>
+        )}
 
-      {/* フロントマタータブ */}
-      {activeTab === "frontmatter" && (
-        <div className="space-y-4">
-          <div className="form-group">
-            <label htmlFor="fm-title" className="form-label">
-              タイトル
-            </label>
-            <input
-              id="fm-title"
-              type="text"
-              className="form-input"
+        {activeTab === 1 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="タイトル"
               value={formData.frontmatter?.title || ""}
               onChange={(e) => updateFrontmatter("title", e.target.value)}
               placeholder="ページタイトル"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="fm-description" className="form-label">
-              説明
-            </label>
-            <textarea
-              id="fm-description"
-              className="form-textarea"
+            <TextField
+              label="説明"
+              multiline
+              rows={3}
               value={formData.frontmatter?.description || ""}
               onChange={(e) => updateFrontmatter("description", e.target.value)}
               placeholder="ページの説明"
-              rows={3}
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="fm-author" className="form-label">
-              著者
-            </label>
-            <input
-              id="fm-author"
-              type="text"
-              className="form-input"
+            <TextField
+              label="著者"
               value={formData.frontmatter?.author || ""}
               onChange={(e) => updateFrontmatter("author", e.target.value)}
               placeholder="著者名"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="fm-tags" className="form-label">
-              タグ（カンマ区切り）
-            </label>
-            <input
-              id="fm-tags"
-              type="text"
-              className="form-input"
+            <TextField
+              label="タグ（カンマ区切り）"
               value={formData.frontmatter?.tags?.join(", ") || ""}
               onChange={(e) =>
                 updateFrontmatter(
@@ -222,16 +173,10 @@ export function MarkdownForm({
               placeholder="tag1, tag2, tag3"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="fm-date" className="form-label">
-              日付
-            </label>
-            <input
-              id="fm-date"
+            <TextField
+              label="日付"
               type="date"
-              className="form-input"
               value={
                 formData.frontmatter?.date
                   ? new Date(formData.frontmatter.date)
@@ -241,31 +186,21 @@ export function MarkdownForm({
               }
               onChange={(e) => updateFrontmatter("date", e.target.value)}
               disabled={isLoading}
+              InputLabelProps={{ shrink: true }}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="fm-image" className="form-label">
-              アイキャッチ画像URL
-            </label>
-            <input
-              id="fm-image"
-              type="text"
-              className="form-input"
+            <TextField
+              label="アイキャッチ画像URL"
               value={String(formData.frontmatter?.image || "")}
               onChange={(e) => updateFrontmatter("image", e.target.value)}
               placeholder="/images/featured.jpg"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="fm-custom" className="form-label">
-              カスタムフィールド（JSON）
-            </label>
-            <textarea
-              id="fm-custom"
-              className="form-textarea"
+            <TextField
+              label="カスタムフィールド（JSON）"
+              multiline
+              rows={4}
               value={
                 formData.frontmatter?.custom
                   ? JSON.stringify(formData.frontmatter.custom, null, 2)
@@ -280,45 +215,27 @@ export function MarkdownForm({
                 }
               }}
               placeholder='{"key": "value"}'
-              rows={4}
               disabled={isLoading}
-              style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+              sx={{ fontFamily: "monospace" }}
             />
-          </div>
-        </div>
-      )}
+          </Box>
+        )}
 
-      {/* 設定タブ */}
-      {activeTab === "settings" && (
-        <div className="space-y-4">
-          <div className="form-group">
-            <label htmlFor="contentId" className="form-label">
-              関連コンテンツID
-            </label>
-            <input
-              id="contentId"
-              type="text"
-              className="form-input"
+        {activeTab === 2 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="関連コンテンツID"
               value={formData.contentId || ""}
               onChange={(e) =>
                 setFormData({ ...formData, contentId: e.target.value })
               }
               placeholder="content-id"
               disabled={isLoading}
+              helperText="このページに関連するコンテンツのID"
             />
-            <p className="text-xs text-gray-500">
-              このページに関連するコンテンツのID
-            </p>
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="path" className="form-label">
-              パス
-            </label>
-            <input
-              id="path"
-              type="text"
-              className="form-input"
+            <TextField
+              label="パス"
               value={formData.path || ""}
               onChange={(e) =>
                 setFormData({ ...formData, path: e.target.value })
@@ -326,67 +243,55 @@ export function MarkdownForm({
               placeholder="/blog/category"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="row">
-            <div className="col col-6">
-              <div className="form-group">
-                <label htmlFor="lang" className="form-label">
-                  言語
-                </label>
-                <select
-                  id="lang"
-                  className="form-select"
-                  value={formData.lang}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lang: e.target.value })
-                  }
-                  disabled={isLoading}
-                >
-                  <option value="ja">日本語 (ja)</option>
-                  <option value="en">English (en)</option>
-                  <option value="zh">中文 (zh)</option>
-                  <option value="ko">한국어 (ko)</option>
-                </select>
-              </div>
-            </div>
+            <Grid2 container spacing={2}>
+              <Grid2 xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>言語</InputLabel>
+                  <Select
+                    value={formData.lang}
+                    label="言語"
+                    onChange={(e) =>
+                      setFormData({ ...formData, lang: e.target.value })
+                    }
+                    disabled={isLoading}
+                  >
+                    <MenuItem value="ja">日本語 (ja)</MenuItem>
+                    <MenuItem value="en">English (en)</MenuItem>
+                    <MenuItem value="zh">中文 (zh)</MenuItem>
+                    <MenuItem value="ko">한국어 (ko)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid2>
 
-            <div className="col col-6">
-              <div className="form-group">
-                <label htmlFor="status" className="form-label">
-                  ステータス
-                </label>
-                <select
-                  id="status"
-                  className="form-select"
-                  value={formData.status}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setFormData({
-                      ...formData,
-                      status: e.target.value as
-                        | "draft"
-                        | "published"
-                        | "archived",
-                    })
-                  }
-                  disabled={isLoading}
-                >
-                  <option value="draft">下書き</option>
-                  <option value="published">公開</option>
-                  <option value="archived">アーカイブ</option>
-                </select>
-              </div>
-            </div>
-          </div>
+              <Grid2 xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>ステータス</InputLabel>
+                  <Select
+                    value={formData.status}
+                    label="ステータス"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        status: e.target.value as
+                          | "draft"
+                          | "published"
+                          | "archived",
+                      })
+                    }
+                    disabled={isLoading}
+                  >
+                    <MenuItem value="draft">下書き</MenuItem>
+                    <MenuItem value="published">公開</MenuItem>
+                    <MenuItem value="archived">アーカイブ</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid2>
+            </Grid2>
 
-          <div className="form-group">
-            <label htmlFor="version" className="form-label">
-              バージョン
-            </label>
-            <input
-              id="version"
+            <TextField
+              label="バージョン"
               type="number"
-              className="form-input"
               value={formData.version || 1}
               onChange={(e) =>
                 setFormData({
@@ -394,28 +299,27 @@ export function MarkdownForm({
                   version: parseInt(e.target.value, 10) || 1,
                 })
               }
-              min="1"
+              inputProps={{ min: 1 }}
               disabled={isLoading}
             />
-          </div>
-        </div>
-      )}
+          </Box>
+        )}
+      </Box>
 
-      <hr />
+      <Divider sx={{ my: 3 }} />
 
-      <div className="d-flex justify-content-end" style={{ gap: "0.5rem" }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+        <Button
+          variant="outlined"
           onClick={onCancel}
           disabled={isLoading}
         >
           キャンセル
-        </button>
-        <button type="submit" className="btn" disabled={isLoading}>
+        </Button>
+        <Button type="submit" variant="contained" disabled={isLoading}>
           {isLoading ? "保存中..." : mode === "create" ? "作成" : "保存"}
-        </button>
-      </div>
-    </form>
+        </Button>
+      </Box>
+    </Box>
   );
 }

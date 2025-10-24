@@ -13,6 +13,21 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Typography,
+} from "@mui/material";
+import Grid2 from "./components/Grid2";
 import { ContentForm } from "@/components/content-form";
 import type { Content } from "@/types/content";
 
@@ -36,7 +51,6 @@ export default function Home() {
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // コンテンツ一覧を取得
   const fetchContents = useCallback(async () => {
     try {
       const response = await fetch("/api/contents");
@@ -48,7 +62,6 @@ export default function Home() {
     }
   }, []);
 
-  // 統計情報を取得
   const fetchStats = useCallback(async () => {
     try {
       const response = await fetch("/api/contents/stats");
@@ -60,13 +73,11 @@ export default function Home() {
     }
   }, []);
 
-  // 初回ロード時にコンテンツを取得
   useEffect(() => {
     fetchContents();
     fetchStats();
   }, [fetchContents, fetchStats]);
 
-  // 新規コンテンツ作成
   const handleCreateContent = async (data: Partial<Content>) => {
     setIsLoading(true);
     try {
@@ -96,7 +107,6 @@ export default function Home() {
     }
   };
 
-  // コンテンツ編集
   const handleEditContent = async (data: Partial<Content>) => {
     setIsLoading(true);
     try {
@@ -127,7 +137,6 @@ export default function Home() {
     }
   };
 
-  // コンテンツ削除
   const handleDeleteContent = async (id: string) => {
     if (!confirm("このコンテンツを削除してもよろしいですか？")) {
       return;
@@ -153,283 +162,362 @@ export default function Home() {
     }
   };
 
-  // 編集ダイアログを開く
   const openEditDialog = (content: Content) => {
     setEditingContent({ ...content });
     setIsEditDialogOpen(true);
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* ヘッダー */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="container-tight py-8">
-          <div className="">
-            <div className="">
-              <h1>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+      <Paper
+        elevation={0}
+        sx={{
+          borderBottom: 1,
+          borderColor: "divider",
+          bgcolor: "background.paper",
+        }}
+      >
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography variant="h4" component="h1" gutterBottom>
                 コンテンツ管理
-              </h1>
-            </div>
-            <button
-              type="button"
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Plus />}
               onClick={() => setIsCreateDialogOpen(true)}
-              className="btn btn-primary btn-lg"
             >
-              <Plus className="h-5 w-5" />
               新規作成
-            </button>
-          </div>
-        </div>
-      </header>
+            </Button>
+          </Box>
+        </Container>
+      </Paper>
 
-      {/* メインコンテンツ */}
-      <main className="container-tight py-12">
-        {/* 統計情報 */}
+      <Container maxWidth="lg" sx={{ py: 6 }}>
         {dbStats && (
-          <section className="mb-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="card stat-card">
-              <BarChart3 className="h-5 w-5 text-muted-foreground mb-3" />
-              <div className="stat-value">{dbStats.totalContents || 0}</div>
-              <div className="stat-label">コンテンツ数</div>
-            </div>
-            <div className="card stat-card">
-              <Database className="h-5 w-5 text-muted-foreground mb-3" />
-              <div className="stat-value">{dbStats.totalDbFiles || 0}</div>
-              <div className="stat-label">データベース</div>
-            </div>
-            <div className="card stat-card">
-              <FolderOpen className="h-5 w-5 text-muted-foreground mb-3" />
-              <div className="stat-value">
-                {((dbStats.totalSize || 0) / 1024).toFixed(1)} KB
-              </div>
-              <div className="stat-label">合計サイズ</div>
-            </div>
-            <div className="card stat-card">
-              <FileText className="h-5 w-5 text-muted-foreground mb-3" />
-              <div className="stat-value">
-                {dbStats.contentsList?.length || 0}
-              </div>
-              <div className="stat-label">アクティブ</div>
-            </div>
-          </section>
+          <Grid2 container spacing={3} sx={{ mb: 6 }}>
+            <Grid2 xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <BarChart3
+                    size={20}
+                    style={{ color: "#9ca3af", marginBottom: 12 }}
+                  />
+                  <Typography variant="h4" component="div" gutterBottom>
+                    {dbStats.totalContents || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    コンテンツ数
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
+            <Grid2 xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <Database
+                    size={20}
+                    style={{ color: "#9ca3af", marginBottom: 12 }}
+                  />
+                  <Typography variant="h4" component="div" gutterBottom>
+                    {dbStats.totalDbFiles || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    データベース
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
+            <Grid2 xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <FolderOpen
+                    size={20}
+                    style={{ color: "#9ca3af", marginBottom: 12 }}
+                  />
+                  <Typography variant="h4" component="div" gutterBottom>
+                    {((dbStats.totalSize || 0) / 1024).toFixed(1)} KB
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    合計サイズ
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
+            <Grid2 xs={12} sm={6} md={3}>
+              <Card>
+                <CardContent>
+                  <FileText
+                    size={20}
+                    style={{ color: "#9ca3af", marginBottom: 12 }}
+                  />
+                  <Typography variant="h4" component="div" gutterBottom>
+                    {dbStats.contentsList?.length || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    アクティブ
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid2>
+          </Grid2>
         )}
 
-        {/* ナビゲーション */}
-        <nav className="mb-20">
-          <div className="flex flex-wrap gap-3">
-            <Link href="/markdown" className="btn btn-secondary">
-              <FileText className="h-4 w-4" />
-              Markdownページ
-            </Link>
-            <Link href="/media" className="btn btn-secondary">
-              <ImageIcon className="h-4 w-4" />
-              メディア管理
-            </Link>
-            <Link href="/databases" className="btn btn-secondary">
-              <Database className="h-4 w-4" />
-              データベース管理
-            </Link>
-          </div>
-        </nav>
+        <Box sx={{ mb: 6, display: "flex", flexWrap: "wrap", gap: 1.5 }}>
+          <Button
+            component={Link}
+            href="/markdown"
+            variant="outlined"
+            startIcon={<FileText size={16} />}
+          >
+            Markdownページ
+          </Button>
+          <Button
+            component={Link}
+            href="/media"
+            variant="outlined"
+            startIcon={<ImageIcon size={16} />}
+          >
+            メディア管理
+          </Button>
+          <Button
+            component={Link}
+            href="/databases"
+            variant="outlined"
+            startIcon={<Database size={16} />}
+          >
+            データベース管理
+          </Button>
+        </Box>
 
-        {/* コンテンツ一覧 */}
-        <section>
         {contents.length === 0 ? (
-          <div className="card p-16 text-center">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              コンテンツがありません
-            </h3>
-            <p className="text-sm text-muted-foreground mb-6">
-              新規作成ボタンから最初のコンテンツを作成してください
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsCreateDialogOpen(true)}
-              className="btn btn-primary"
+          <Card>
+            <CardContent
+              sx={{
+                py: 8,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+              }}
             >
-              <Plus className="h-4 w-4" />
-              コンテンツを作成
-            </button>
-          </div>
+              <FileText size={48} style={{ color: "#9ca3af", marginBottom: 16 }} />
+              <Typography variant="h6" gutterBottom>
+                コンテンツがありません
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 3 }}
+              >
+                新規作成ボタンから最初のコンテンツを作成してください
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Plus size={16} />}
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
+                コンテンツを作成
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <Grid2 container spacing={3}>
             {contents.map((content) => (
-              <article
-                key={content.id}
-                className="card card-hover content-card group"
-              >
-                <div className="content-card-header">
-                  <h3 className="content-card-title line-clamp-2">
-                    {content.title}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="badge badge-secondary text-xs">
-                      {content.status || "draft"}
-                    </span>
-                  </div>
-                </div>
+              <Grid2 xs={12} md={6} lg={4} key={content.id}>
+                <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        mb: 2,
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        component="h3"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          flex: 1,
+                        }}
+                      >
+                        {content.title}
+                      </Typography>
+                      <Chip
+                        label={content.status || "draft"}
+                        size="small"
+                        color="secondary"
+                        sx={{ ml: 1 }}
+                      />
+                    </Box>
 
-                <div className="content-card-meta">
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">ID:</span>{" "}
-                    {content.id}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">作成日:</span>{" "}
-                    {new Date(
-                      content.createdAt || new Date(),
-                    ).toLocaleDateString("ja-JP", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </div>
-                  {content.tags && content.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {content.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="badge badge-outline text-xs">
-                          {tag}
-                        </span>
-                      ))}
-                      {content.tags.length > 3 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{content.tags.length - 3}
-                        </span>
+                    <Box sx={{ mb: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>ID:</strong> {content.id}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        <strong>作成日:</strong>{" "}
+                        {new Date(
+                          content.createdAt || new Date(),
+                        ).toLocaleDateString("ja-JP", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </Typography>
+                      {content.tags && content.tags.length > 0 && (
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                          {content.tags.slice(0, 3).map((tag) => (
+                            <Chip
+                              key={tag}
+                              label={tag}
+                              size="small"
+                              variant="outlined"
+                            />
+                          ))}
+                          {content.tags.length > 3 && (
+                            <Typography variant="caption" color="text.secondary">
+                              +{content.tags.length - 3}
+                            </Typography>
+                          )}
+                        </Box>
                       )}
-                    </div>
-                  )}
-                </div>
+                    </Box>
 
-                {content.summary && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-6">
-                    {content.summary}
-                  </p>
-                )}
+                    {content.summary && (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          mb: 2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {content.summary}
+                      </Typography>
+                    )}
 
-                <div className="content-card-actions">
-                  <button
-                    type="button"
-                    onClick={() => openEditDialog(content)}
-                    className="btn btn-sm btn-secondary flex-1"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                    編集
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteContent(content.id)}
-                    className="btn btn-sm btn-ghost text-destructive"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </article>
+                    <Box sx={{ display: "flex", gap: 1, mt: "auto" }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Edit size={14} />}
+                        onClick={() => openEditDialog(content)}
+                        sx={{ flex: 1 }}
+                      >
+                        編集
+                      </Button>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteContent(content.id)}
+                      >
+                        <Trash2 size={14} />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid2>
             ))}
-          </div>
+          </Grid2>
         )}
-        </section>
-      </main>
+      </Container>
 
-      {/* 作成ダイアログ */}
-      {isCreateDialogOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => setIsCreateDialogOpen(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setIsCreateDialogOpen(false);
-            }
-          }}
-        >
-          <div
-            role="document"
-            className="dialog-content max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+      <Dialog
+        open={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
           >
-            <div className="dialog-header">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="dialog-title">新しいコンテンツを作成</h2>
-                  <p className="dialog-description mt-2">
-                    コンテンツの基本情報を入力してください
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCreateDialogOpen(false)}
-                  className="btn btn-ghost btn-sm"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <ContentForm
-              mode="create"
-              onSubmit={handleCreateContent}
-              onCancel={() => setIsCreateDialogOpen(false)}
-              isLoading={isLoading}
-            />
-            <div className="dialog-footer">
-              <button
-                type="button"
-                onClick={() => setIsCreateDialogOpen(false)}
-                className="btn btn-secondary"
-                disabled={isLoading}
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <Box>
+              <Typography variant="h6" component="div">
+                新しいコンテンツを作成
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                コンテンツの基本情報を入力してください
+              </Typography>
+            </Box>
+            <IconButton onClick={() => setIsCreateDialogOpen(false)}>
+              <X size={20} />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <ContentForm
+            mode="create"
+            onSubmit={handleCreateContent}
+            onCancel={() => setIsCreateDialogOpen(false)}
+            isLoading={isLoading}
+          />
+        </DialogContent>
+      </Dialog>
 
-      {/* 編集ダイアログ */}
-      {isEditDialogOpen && editingContent && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="dialog-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => {
-            setIsEditDialogOpen(false);
-            setEditingContent(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setIsEditDialogOpen(false);
-              setEditingContent(null);
-            }
-          }}
-        >
-          <div
-            role="document"
-            className="dialog-content max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
+      <Dialog
+        open={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingContent(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
           >
-            <div className="dialog-header">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="dialog-title">コンテンツを編集</h2>
-                  <p className="dialog-description mt-2">
-                    コンテンツの情報を更新してください
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditDialogOpen(false);
-                    setEditingContent(null);
-                  }}
-                  className="btn btn-ghost btn-sm"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            <Box>
+              <Typography variant="h6" component="div">
+                コンテンツを編集
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                コンテンツの情報を更新してください
+              </Typography>
+            </Box>
+            <IconButton
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setEditingContent(null);
+              }}
+            >
+              <X size={20} />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {editingContent && (
             <ContentForm
               mode="edit"
               initialData={editingContent}
@@ -440,22 +528,9 @@ export default function Home() {
               }}
               isLoading={isLoading}
             />
-            <div className="dialog-footer">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setEditingContent(null);
-                }}
-                className="btn btn-secondary"
-                disabled={isLoading}
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Box>
   );
 }

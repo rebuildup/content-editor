@@ -2,6 +2,24 @@
 
 import { useState } from "react";
 import type { Content } from "@/types/content";
+import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+  Card,
+  CardContent,
+  IconButton,
+} from "@mui/material";
+import Grid2 from "../app/components/Grid2";
 
 interface ContentFormProps {
   initialData?: Partial<Content>;
@@ -48,7 +66,7 @@ export function ContentForm({
     ogImage: formData.seo?.openGraph?.image || "",
     canonical: formData.seo?.meta?.canonical || "",
   });
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,104 +110,63 @@ export function ContentForm({
   };
 
   const tabs = [
-    { id: "basic", label: "基本情報" },
-    { id: "seo", label: "SEO" },
-    { id: "structure", label: "構造" },
-    { id: "i18n", label: "多言語" },
-    { id: "advanced", label: "高度な設定" },
+    { label: "基本情報" },
+    { label: "SEO" },
+    { label: "構造" },
+    { label: "多言語" },
+    { label: "高度な設定" },
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* タブナビゲーション */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === tab.id
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </div>
+    <Box component="form" onSubmit={handleSubmit} sx={{ pt: 2 }}>
+      <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+        {tabs.map((tab, index) => (
+          <Tab key={index} label={tab.label} />
+        ))}
+      </Tabs>
 
-      {/* 基本情報タブ */}
-      {activeTab === "basic" && (
-        <div className="space-y-4">
-          {mode === "create" && (
-            <div className="form-group">
-              <label htmlFor="id" className="form-label">
-                コンテンツID <span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                id="id"
-                type="text"
-                className="form-input"
+      <Box sx={{ mt: 3 }}>
+        {activeTab === 0 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {mode === "create" && (
+              <TextField
+                label="コンテンツID"
+                required
                 value={formData.id}
                 onChange={(e) =>
                   setFormData({ ...formData, id: e.target.value })
                 }
                 placeholder="apple01"
-                required
                 disabled={isLoading}
+                helperText="例: apple01 → content-apple01.db として保存されます"
               />
-              <p className="text-xs text-gray-500">
-                例: apple01 → content-apple01.db として保存されます
-              </p>
-            </div>
-          )}
+            )}
 
-          <div className="form-group">
-            <label htmlFor="title" className="form-label">
-              タイトル <span style={{ color: "red" }}>*</span>
-            </label>
-            <input
-              id="title"
-              type="text"
-              className="form-input"
+            <TextField
+              label="タイトル"
+              required
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
               }
               placeholder="コンテンツのタイトル"
-              required
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="summary" className="form-label">
-              要約
-            </label>
-            <textarea
-              id="summary"
-              className="form-textarea"
+            <TextField
+              label="要約"
+              multiline
+              rows={4}
               value={formData.summary || ""}
               onChange={(e) =>
                 setFormData({ ...formData, summary: e.target.value })
               }
               placeholder="コンテンツの要約を入力..."
-              rows={4}
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="publicUrl" className="form-label">
-              公開URL
-            </label>
-            <input
-              id="publicUrl"
-              type="text"
-              className="form-input"
+            <TextField
+              label="公開URL"
               value={formData.publicUrl || ""}
               onChange={(e) =>
                 setFormData({ ...formData, publicUrl: e.target.value })
@@ -197,173 +174,125 @@ export function ContentForm({
               placeholder="/path/to/content"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="row">
-            <div className="col col-6">
-              <div className="form-group">
-                <label htmlFor="lang" className="form-label">
-                  言語
-                </label>
-                <select
-                  id="lang"
-                  className="form-select"
-                  value={formData.lang}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lang: e.target.value })
-                  }
-                  disabled={isLoading}
-                >
-                  <option value="ja">日本語 (ja)</option>
-                  <option value="en">English (en)</option>
-                  <option value="zh">中文 (zh)</option>
-                  <option value="ko">한국어 (ko)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="col col-6">
-              <div className="form-group">
-                <label htmlFor="status" className="form-label">
-                  ステータス
-                </label>
-                <select
-                  id="status"
-                  className="form-select"
-                  value={formData.status}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setFormData({
-                      ...formData,
-                      status: e.target.value as
-                        | "draft"
-                        | "published"
-                        | "archived",
-                    })
-                  }
-                  disabled={isLoading}
-                >
-                  <option value="draft">下書き</option>
-                  <option value="published">公開</option>
-                  <option value="archived">アーカイブ</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="visibility" className="form-label">
-              可視性
-            </label>
-            <select
-              id="visibility"
-              className="form-select"
-              value={formData.visibility}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                setFormData({
-                  ...formData,
-                  visibility: e.target.value as
-                    | "public"
-                    | "unlisted"
-                    | "private"
-                    | "draft",
-                })
-              }
-              disabled={isLoading}
-            >
-              <option value="public">公開</option>
-              <option value="unlisted">非公開（URLで共有可）</option>
-              <option value="private">プライベート</option>
-              <option value="draft">下書き</option>
-            </select>
-          </div>
-
-          <hr />
-
-          <div className="form-group">
-            <label htmlFor="newTag" className="form-label">
-              タグ
-            </label>
-            <div className="d-flex" style={{ gap: "0.5rem" }}>
-              <input
-                id="newTag"
-                type="text"
-                className="form-input"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addTag();
-                  }
-                }}
-                placeholder="タグを入力..."
-                disabled={isLoading}
-                style={{ flex: 1 }}
-              />
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={addTag}
-                disabled={isLoading}
-              >
-                +
-              </button>
-            </div>
-            {formData.tags && formData.tags.length > 0 && (
-              <div
-                className="d-flex"
-                style={{ gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}
-              >
-                {formData.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="badge"
-                    style={{
-                      backgroundColor: "#e9ecef",
-                      color: "#495057",
-                      padding: "0.25rem 0.5rem",
-                      borderRadius: "0.25rem",
-                      fontSize: "0.875rem",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.25rem",
-                    }}
+            <Grid2 container spacing={2}>
+              <Grid2 xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>言語</InputLabel>
+                  <Select
+                    value={formData.lang}
+                    label="言語"
+                    onChange={(e) =>
+                      setFormData({ ...formData, lang: e.target.value })
+                    }
+                    disabled={isLoading}
                   >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#dc3545",
-                        cursor: "pointer",
-                        padding: "0",
-                        marginLeft: "0.25rem",
-                      }}
-                      disabled={isLoading}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                    <MenuItem value="ja">日本語 (ja)</MenuItem>
+                    <MenuItem value="en">English (en)</MenuItem>
+                    <MenuItem value="zh">中文 (zh)</MenuItem>
+                    <MenuItem value="ko">한국어 (ko)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid2>
 
-      {/* SEOタブ */}
-      {activeTab === "seo" && (
-        <div className="space-y-4">
-          <div className="form-group">
-            <label htmlFor="metaTitle" className="form-label">
-              メタタイトル
-            </label>
-            <input
-              id="metaTitle"
-              type="text"
-              className="form-input"
+              <Grid2 xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>ステータス</InputLabel>
+                  <Select
+                    value={formData.status}
+                    label="ステータス"
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        status: e.target.value as
+                          | "draft"
+                          | "published"
+                          | "archived",
+                      })
+                    }
+                    disabled={isLoading}
+                  >
+                    <MenuItem value="draft">下書き</MenuItem>
+                    <MenuItem value="published">公開</MenuItem>
+                    <MenuItem value="archived">アーカイブ</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid2>
+            </Grid2>
+
+            <FormControl fullWidth>
+              <InputLabel>可視性</InputLabel>
+              <Select
+                value={formData.visibility}
+                label="可視性"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    visibility: e.target.value as
+                      | "public"
+                      | "unlisted"
+                      | "private"
+                      | "draft",
+                  })
+                }
+                disabled={isLoading}
+              >
+                <MenuItem value="public">公開</MenuItem>
+                <MenuItem value="unlisted">非公開（URLで共有可）</MenuItem>
+                <MenuItem value="private">プライベート</MenuItem>
+                <MenuItem value="draft">下書き</MenuItem>
+              </Select>
+            </FormControl>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                タグ
+              </Typography>
+              <Box sx={{ display: "flex", gap: 1 }}>
+                <TextField
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="タグを入力..."
+                  disabled={isLoading}
+                  size="small"
+                  sx={{ flex: 1 }}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={addTag}
+                  disabled={isLoading}
+                >
+                  +
+                </Button>
+              </Box>
+              {formData.tags && formData.tags.length > 0 && (
+                <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  {formData.tags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      onDelete={() => removeTag(tag)}
+                      disabled={isLoading}
+                    />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )}
+
+        {activeTab === 1 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="メタタイトル"
               value={seoFields.metaTitle}
               onChange={(e) =>
                 setSeoFields({ ...seoFields, metaTitle: e.target.value })
@@ -371,15 +300,11 @@ export function ContentForm({
               placeholder="SEO用のタイトル"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="metaDescription" className="form-label">
-              メタディスクリプション
-            </label>
-            <textarea
-              id="metaDescription"
-              className="form-textarea"
+            <TextField
+              label="メタディスクリプション"
+              multiline
+              rows={3}
               value={seoFields.metaDescription}
               onChange={(e) =>
                 setSeoFields({
@@ -388,21 +313,13 @@ export function ContentForm({
                 })
               }
               placeholder="SEO用の説明文（150-160文字推奨）"
-              rows={3}
               disabled={isLoading}
             />
-          </div>
 
-          <hr />
+            <Divider />
 
-          <div className="form-group">
-            <label htmlFor="ogTitle" className="form-label">
-              OG:Title
-            </label>
-            <input
-              id="ogTitle"
-              type="text"
-              className="form-input"
+            <TextField
+              label="OG:Title"
               value={seoFields.ogTitle}
               onChange={(e) =>
                 setSeoFields({ ...seoFields, ogTitle: e.target.value })
@@ -410,33 +327,21 @@ export function ContentForm({
               placeholder="SNSシェア用のタイトル"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="ogDescription" className="form-label">
-              OG:Description
-            </label>
-            <textarea
-              id="ogDescription"
-              className="form-textarea"
+            <TextField
+              label="OG:Description"
+              multiline
+              rows={3}
               value={seoFields.ogDescription}
               onChange={(e) =>
                 setSeoFields({ ...seoFields, ogDescription: e.target.value })
               }
               placeholder="SNSシェア用の説明文"
-              rows={3}
               disabled={isLoading}
             />
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="ogImage" className="form-label">
-              OG:Image URL
-            </label>
-            <input
-              id="ogImage"
-              type="text"
-              className="form-input"
+            <TextField
+              label="OG:Image URL"
               value={seoFields.ogImage}
               onChange={(e) =>
                 setSeoFields({ ...seoFields, ogImage: e.target.value })
@@ -444,18 +349,11 @@ export function ContentForm({
               placeholder="/images/og-image.jpg"
               disabled={isLoading}
             />
-          </div>
 
-          <hr />
+            <Divider />
 
-          <div className="form-group">
-            <label htmlFor="canonical" className="form-label">
-              カノニカルURL
-            </label>
-            <input
-              id="canonical"
-              type="text"
-              className="form-input"
+            <TextField
+              label="カノニカルURL"
               value={seoFields.canonical}
               onChange={(e) =>
                 setSeoFields({ ...seoFields, canonical: e.target.value })
@@ -463,41 +361,24 @@ export function ContentForm({
               placeholder="https://example.com/canonical-url"
               disabled={isLoading}
             />
-          </div>
-        </div>
-      )}
+          </Box>
+        )}
 
-      {/* 構造タブ */}
-      {activeTab === "structure" && (
-        <div className="space-y-4">
-          <div className="form-group">
-            <label htmlFor="parentId" className="form-label">
-              親コンテンツID
-            </label>
-            <input
-              id="parentId"
-              type="text"
-              className="form-input"
+        {activeTab === 2 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <TextField
+              label="親コンテンツID"
               value={formData.parentId || ""}
               onChange={(e) =>
                 setFormData({ ...formData, parentId: e.target.value })
               }
               placeholder="parent-content-id"
               disabled={isLoading}
+              helperText="階層構造を持たせる場合に親コンテンツのIDを指定"
             />
-            <p className="text-xs text-gray-500">
-              階層構造を持たせる場合に親コンテンツのIDを指定
-            </p>
-          </div>
 
-          <div className="form-group">
-            <label htmlFor="path" className="form-label">
-              パス
-            </label>
-            <input
-              id="path"
-              type="text"
-              className="form-input"
+            <TextField
+              label="パス"
               value={formData.path || ""}
               onChange={(e) =>
                 setFormData({ ...formData, path: e.target.value })
@@ -505,18 +386,13 @@ export function ContentForm({
               placeholder="/category/subcategory"
               disabled={isLoading}
             />
-          </div>
 
-          <div className="row">
-            <div className="col col-6">
-              <div className="form-group">
-                <label htmlFor="depth" className="form-label">
-                  階層の深さ
-                </label>
-                <input
-                  id="depth"
+            <Grid2 container spacing={2}>
+              <Grid2 xs={12} sm={6}>
+                <TextField
+                  label="階層の深さ"
                   type="number"
-                  className="form-input"
+                  fullWidth
                   value={formData.depth || 0}
                   onChange={(e) =>
                     setFormData({
@@ -524,21 +400,16 @@ export function ContentForm({
                       depth: parseInt(e.target.value, 10) || 0,
                     })
                   }
-                  min="0"
+                  inputProps={{ min: 0 }}
                   disabled={isLoading}
                 />
-              </div>
-            </div>
+              </Grid2>
 
-            <div className="col col-6">
-              <div className="form-group">
-                <label htmlFor="order" className="form-label">
-                  表示順序
-                </label>
-                <input
-                  id="order"
+              <Grid2 xs={12} sm={6}>
+                <TextField
+                  label="表示順序"
                   type="number"
-                  className="form-input"
+                  fullWidth
                   value={formData.order || 0}
                   onChange={(e) =>
                     setFormData({
@@ -548,26 +419,18 @@ export function ContentForm({
                   }
                   disabled={isLoading}
                 />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+              </Grid2>
+            </Grid2>
+          </Box>
+        )}
 
-      {/* 多言語タブ */}
-      {activeTab === "i18n" && (
-        <div className="space-y-4">
-          <div className="text-sm text-gray-500 mb-4">
-            多言語対応の設定を行います
-          </div>
-          <div className="form-group">
-            <label htmlFor="defaultLang" className="form-label">
-              デフォルト言語
-            </label>
-            <input
-              id="defaultLang"
-              type="text"
-              className="form-input"
+        {activeTab === 3 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              多言語対応の設定を行います
+            </Typography>
+            <TextField
+              label="デフォルト言語"
               value={formData.i18n?.defaultLang || formData.lang || "ja"}
               onChange={(e) =>
                 setFormData({
@@ -581,14 +444,10 @@ export function ContentForm({
               placeholder="ja"
               disabled={isLoading}
             />
-          </div>
-          <div className="form-group">
-            <label htmlFor="translations" className="form-label">
-              翻訳マップ（JSON）
-            </label>
-            <textarea
-              id="translations"
-              className="form-textarea"
+            <TextField
+              label="翻訳マップ（JSON）"
+              multiline
+              rows={4}
               value={JSON.stringify(formData.i18n?.translations || {}, null, 2)}
               onChange={(e) => {
                 try {
@@ -607,113 +466,85 @@ export function ContentForm({
                 }
               }}
               placeholder='{"en": "content-en-001", "zh": "content-zh-001"}'
-              rows={4}
               disabled={isLoading}
-              style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+              helperText="言語コードと翻訳先コンテンツIDのマッピング"
+              sx={{ fontFamily: "monospace" }}
             />
-            <p className="text-xs text-gray-500">
-              言語コードと翻訳先コンテンツIDのマッピング
-            </p>
-          </div>
-        </div>
-      )}
+          </Box>
+        )}
 
-      {/* 高度な設定タブ */}
-      {activeTab === "advanced" && (
-        <div className="space-y-4">
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">アクセス制御</h3>
-            </div>
-            <div className="card-body">
-              <div className="form-group">
-                <label htmlFor="owner" className="form-label">
-                  オーナー
-                </label>
-                <input
-                  id="owner"
-                  type="text"
-                  className="form-input"
-                  value={formData.permissions?.owner || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      permissions: {
-                        ...formData.permissions,
-                        owner: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="user-id"
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="readers" className="form-label">
-                  読み取り権限（カンマ区切り）
-                </label>
-                <input
-                  id="readers"
-                  type="text"
-                  className="form-input"
-                  value={formData.permissions?.readers?.join(", ") || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      permissions: {
-                        ...formData.permissions,
-                        readers: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      },
-                    })
-                  }
-                  placeholder="user1, user2, user3"
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="editors" className="form-label">
-                  編集権限（カンマ区切り）
-                </label>
-                <input
-                  id="editors"
-                  type="text"
-                  className="form-input"
-                  value={formData.permissions?.editors?.join(", ") || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      permissions: {
-                        ...formData.permissions,
-                        editors: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      },
-                    })
-                  }
-                  placeholder="editor1, editor2"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-          </div>
+        {activeTab === 4 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  アクセス制御
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <TextField
+                    label="オーナー"
+                    value={formData.permissions?.owner || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        permissions: {
+                          ...formData.permissions,
+                          owner: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="user-id"
+                    disabled={isLoading}
+                  />
+                  <TextField
+                    label="読み取り権限（カンマ区切り）"
+                    value={formData.permissions?.readers?.join(", ") || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        permissions: {
+                          ...formData.permissions,
+                          readers: e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        },
+                      })
+                    }
+                    placeholder="user1, user2, user3"
+                    disabled={isLoading}
+                  />
+                  <TextField
+                    label="編集権限（カンマ区切り）"
+                    value={formData.permissions?.editors?.join(", ") || ""}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        permissions: {
+                          ...formData.permissions,
+                          editors: e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        },
+                      })
+                    }
+                    placeholder="editor1, editor2"
+                    disabled={isLoading}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
 
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">バージョニング</h3>
-            </div>
-            <div className="card-body">
-              <div className="form-group">
-                <label htmlFor="version" className="form-label">
-                  バージョン番号
-                </label>
-                <input
-                  id="version"
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  バージョニング
+                </Typography>
+                <TextField
+                  label="バージョン番号"
                   type="number"
-                  className="form-input"
+                  fullWidth
                   value={formData.version || 1}
                   onChange={(e) =>
                     setFormData({
@@ -721,28 +552,23 @@ export function ContentForm({
                       version: parseInt(e.target.value, 10) || 1,
                     })
                   }
-                  min="1"
+                  inputProps={{ min: 1 }}
                   disabled={isLoading}
+                  helperText="現在のバージョン番号（編集のたびに自動増加）"
                 />
-                <p className="text-xs text-gray-500">
-                  現在のバージョン番号（編集のたびに自動増加）
-                </p>
-              </div>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
 
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">拡張フィールド（JSON）</h3>
-            </div>
-            <div className="card-body">
-              <div className="form-group">
-                <label htmlFor="ext" className="form-label">
-                  カスタムデータ（JSON形式）
-                </label>
-                <textarea
-                  id="ext"
-                  className="form-textarea"
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  拡張フィールド（JSON）
+                </Typography>
+                <TextField
+                  label="カスタムデータ（JSON形式）"
+                  multiline
+                  rows={6}
+                  fullWidth
                   value={JSON.stringify(formData.ext || {}, null, 2)}
                   onChange={(e) => {
                     try {
@@ -753,34 +579,30 @@ export function ContentForm({
                     }
                   }}
                   placeholder='{"customField": "value"}'
-                  rows={6}
                   disabled={isLoading}
-                  style={{ fontFamily: "monospace", fontSize: "0.875rem" }}
+                  helperText="プロジェクト固有のカスタムフィールドをJSON形式で追加できます"
+                  sx={{ fontFamily: "monospace" }}
                 />
-                <p className="text-xs text-gray-500">
-                  プロジェクト固有のカスタムフィールドをJSON形式で追加できます
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+              </CardContent>
+            </Card>
+          </Box>
+        )}
+      </Box>
 
-      <hr />
+      <Divider sx={{ my: 3 }} />
 
-      <div className="d-flex justify-content-end" style={{ gap: "0.5rem" }}>
-        <button
-          type="button"
-          className="btn btn-secondary"
+      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+        <Button
+          variant="outlined"
           onClick={onCancel}
           disabled={isLoading}
         >
           キャンセル
-        </button>
-        <button type="submit" className="btn" disabled={isLoading}>
+        </Button>
+        <Button type="submit" variant="contained" disabled={isLoading}>
           {isLoading ? "保存中..." : mode === "create" ? "作成" : "保存"}
-        </button>
-      </div>
-    </form>
+        </Button>
+      </Box>
+    </Box>
   );
 }
