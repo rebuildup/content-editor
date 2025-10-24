@@ -1,0 +1,11 @@
+/editor-home/node_modules
+/editor-home/.next
+/editor-home/package-lock.json
+/editor-home/yarn.lock
+/editor-home/pnpm-lock.yaml
+
+/md-editor/node_modules
+/md-editor/.next
+/md-editor/package-lock.json
+/md-editor/yarn.lock
+/md-editor/pnpm-lock.yaml
