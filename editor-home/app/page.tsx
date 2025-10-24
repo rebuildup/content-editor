@@ -12,15 +12,21 @@ import { Plus, Trash2 } from "lucide-react";
 interface Content {
   id: string;
   title: string;
-  body_md: string;
-  created_at: string;
+  summary?: string;
+  tags?: string[];
+  lang?: string;
+  status?: string;
+  visibility?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  publishedAt?: string;
 }
 
 export default function Home() {
   const [contents, setContents] = useState<Content[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newContent, setNewContent] = useState({ title: "", body_md: "" });
+  const [newContent, setNewContent] = useState({ title: "", summary: "" });
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -42,8 +48,8 @@ export default function Home() {
 
   // 新しいコンテンツを作成
   const handleCreateContent = async () => {
-    if (!newContent.title.trim() || !newContent.body_md.trim()) {
-      alert("タイトルと本文を入力してください");
+    if (!newContent.title.trim() || !newContent.summary.trim()) {
+      alert("タイトルと要約を入力してください");
       return;
     }
 
@@ -57,12 +63,14 @@ export default function Home() {
         body: JSON.stringify({
           id: `content_${Date.now()}`,
           title: newContent.title,
-          body_md: newContent.body_md,
+          summary: newContent.summary,
+          status: "draft",
+          visibility: "draft",
         }),
       });
 
       if (response.ok) {
-        setNewContent({ title: "", body_md: "" });
+        setNewContent({ title: "", summary: "" });
         setIsCreateDialogOpen(false);
         await fetchContents();
       }
@@ -76,8 +84,8 @@ export default function Home() {
 
   // コンテンツを編集
   const handleEditContent = async () => {
-    if (!editingContent || !editingContent.title.trim() || !editingContent.body_md.trim()) {
-      alert("タイトルと本文を入力してください");
+    if (!editingContent || !editingContent.title.trim()) {
+      alert("タイトルを入力してください");
       return;
     }
 
@@ -91,7 +99,7 @@ export default function Home() {
         body: JSON.stringify({
           id: editingContent.id,
           title: editingContent.title,
-          body_md: editingContent.body_md,
+          summary: editingContent.summary,
         }),
       });
 
@@ -155,7 +163,7 @@ export default function Home() {
               <DialogHeader>
                 <DialogTitle>新しいコンテンツを作成</DialogTitle>
                 <DialogDescription>
-                  タイトルと本文（マークダウン形式）を入力してください
+                  タイトルと要約を入力してください
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -171,16 +179,15 @@ export default function Home() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="body">本文（Markdown）</Label>
+                  <Label htmlFor="summary">要約</Label>
                   <Textarea
-                    id="body"
-                    value={newContent.body_md}
+                    id="summary"
+                    value={newContent.summary}
                     onChange={(e) =>
-                      setNewContent({ ...newContent, body_md: e.target.value })
+                      setNewContent({ ...newContent, summary: e.target.value })
                     }
-                    placeholder="# 見出し&#10;&#10;本文をマークダウン形式で入力..."
-                    rows={12}
-                    className="font-mono"
+                    placeholder="コンテンツの要約を入力..."
+                    rows={6}
                   />
                 </div>
               </div>
@@ -205,7 +212,7 @@ export default function Home() {
             <DialogHeader>
               <DialogTitle>コンテンツを編集</DialogTitle>
               <DialogDescription>
-                タイトルと本文（マークダウン形式）を編集してください
+                タイトルと要約を編集してください
               </DialogDescription>
             </DialogHeader>
             {editingContent && (
@@ -222,16 +229,15 @@ export default function Home() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-body">本文（Markdown）</Label>
+                  <Label htmlFor="edit-summary">要約</Label>
                   <Textarea
-                    id="edit-body"
-                    value={editingContent.body_md}
+                    id="edit-summary"
+                    value={editingContent.summary || ""}
                     onChange={(e) =>
-                      setEditingContent({ ...editingContent, body_md: e.target.value })
+                      setEditingContent({ ...editingContent, summary: e.target.value })
                     }
-                    placeholder="# 見出し&#10;&#10;本文をマークダウン形式で入力..."
-                    rows={12}
-                    className="font-mono"
+                    placeholder="コンテンツの要約を入力..."
+                    rows={6}
                   />
                 </div>
               </div>
@@ -265,7 +271,7 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle className="line-clamp-2">{content.title}</CardTitle>
                   <CardDescription>
-                    {new Date(content.created_at).toLocaleDateString("ja-JP", {
+                    {content.createdAt && new Date(content.createdAt).toLocaleDateString("ja-JP", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -274,7 +280,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="flex-1">
                   <p className="text-sm text-muted-foreground line-clamp-3">
-                    {content.body_md}
+                    {content.summary || ""}
                   </p>
                 </CardContent>
                 <CardFooter className="flex gap-2">
