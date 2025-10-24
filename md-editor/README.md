@@ -1,59 +1,164 @@
-# MD Editor - Yoopta リッチテキストエディタ
+# Markdown Editor (md-editor)
 
-Notion風のリッチテキストエディタアプリケーション（独立プロジェクト）。
+editor-homeのデータ構造に対応したマークダウンエディタです。
 
-## 🚀 開発サーバーの起動
+## 機能
+
+- **リッチテキストエディタ**: Yoopta Editorを使用したNotion風のエディタ
+- **コンテンツ管理**: editor-homeで作成したコンテンツに記事を紐付け
+- **メディア管理**: 画像や動画をバイナリでデータベースに保存
+- **マークダウン変換**: エディタの内容を自動的にマークダウンに変換
+- **データ永続化**: editor-homeのSQLiteデータベースに保存
+
+## セットアップ
+
+### 1. 依存関係のインストール
 
 ```bash
 pnpm install
+```
+
+### 2. 環境変数の設定
+
+`.env.local`ファイルを作成して、editor-homeのURLを設定します：
+
+```bash
+cp .env.local.example .env.local
+```
+
+`.env.local`:
+```
+NEXT_PUBLIC_EDITOR_HOME_URL=http://localhost:3000
+```
+
+### 3. editor-homeを起動
+
+まずeditor-homeを起動しておく必要があります：
+
+```bash
+cd ../editor-home
 pnpm dev
 ```
 
-ブラウザで http://localhost:3000 を開いてください。
+editor-homeは`http://localhost:3000`で起動します。
 
-## 📝 概要
+### 4. md-editorを起動
 
-このプロジェクトは [Yoopta-Editor](https://github.com/yoopta-editor/Yoopta-Editor) を使用したリッチテキストエディタです。  
-Notion、Craft、Medium のような編集体験を提供します。
+別のターミナルでmd-editorを起動：
 
-### 主な機能
+```bash
+cd md-editor
+pnpm dev
+```
 
-- 豊富なテキストフォーマット（太字、斜体、下線、ハイライトなど）
-- 見出し（H1、H2、H3）
-- リスト（番号付き、箇条書き、TODO）
-- コードブロック
-- 引用
-- テーブル
-- アコーディオン
-- 画像・動画・ファイルの埋め込み
-- リンク
-- カラウト
-- 区切り線
-- 外部コンテンツの埋め込み
+md-editorは`http://localhost:3001`で起動します。
 
-### エディタの使い方
+## 使い方
 
-- `/` キーでアクションメニューを開く
-- テキストを選択してツールバーを表示
-- スラッシュコマンドで様々なブロックを挿入
+### 1. コンテンツの選択
 
-## 🛠️ 技術スタック
+サイドバーから、記事を紐付けたいコンテンツを選択します。
+コンテンツはeditor-homeであらかじめ作成しておく必要があります。
 
-- **フレームワーク**: Next.js 16 (App Router)
-- **エディタ**: Yoopta-Editor v4.9.9
-- **UI**: Tailwind CSS
-- **言語**: TypeScript
-- **パッケージマネージャー**: pnpm
+### 2. 記事の作成
 
-### Yoopta-Editor パッケージ
+1. タイトルとスラッグを入力
+2. エディタで記事を執筆
+3. 「保存」ボタンをクリック
 
-- `@yoopta/editor` - コアエディタ
-- プラグイン: paragraph, blockquote, headings, lists, code, link, image, video, file, callout, divider, table, accordion, embed
-- ツール: toolbar, action-menu-list, link-tool
-- マーク: Bold, Italic, Code, Underline, Strike, Highlight
+### 3. メディアのアップロード
 
-## 📖 参考資料
+1. コンテンツを選択
+2. 「メディア管理」セクションで「画像・動画をアップロード」をクリック
+3. ファイルを選択
+4. アップロード完了後、ギャラリーから挿入
 
-- [Yoopta-Editor 公式ドキュメント](https://yoopta.dev/)
-- [Yoopta-Editor GitHub](https://github.com/yoopta-editor/Yoopta-Editor)
-- メインのコンテンツ管理システムについては、プロジェクトルートの [README.md](../README.md) を参照してください。
+メディアはコンテンツデータベースの`media`テーブルにバイナリで保存されます。
+
+### 4. 記事の読み込み
+
+1. スラッグを入力
+2. 「スラッグで読み込み」ボタンをクリック
+3. 既存の記事が読み込まれます
+
+## データ構造
+
+### マークダウンページ
+
+`markdown_pages`テーブルに保存されます：
+
+- `id`: ページID
+- `content_id`: 紐付けられたコンテンツID
+- `slug`: URLスラッグ
+- `frontmatter`: メタデータ（JSON）
+- `body`: マークダウン本文
+- `status`: ステータス（draft/published/archived）
+
+### メディア
+
+`media`テーブルに保存されます：
+
+- `id`: メディアID
+- `content_id`: 紐付けられたコンテンツID
+- `filename`: ファイル名
+- `mime_type`: MIMEタイプ
+- `data`: バイナリデータ（BLOB）
+- `size`: ファイルサイズ
+
+## API連携
+
+md-editorは以下のeditor-home APIを使用します：
+
+- `GET /api/contents`: コンテンツ一覧の取得
+- `GET /api/markdown`: マークダウンページの取得
+- `POST /api/markdown`: マークダウンページの作成
+- `PUT /api/markdown`: マークダウンページの更新
+- `GET /api/media`: メディアの取得
+- `POST /api/media`: メディアのアップロード
+
+## 技術スタック
+
+- **Next.js 16**: Reactフレームワーク
+- **Yoopta Editor**: リッチテキストエディタ
+- **TypeScript**: 型安全性
+- **Biome**: フォーマッター/リンター
+
+## 開発
+
+### フォーマット
+
+```bash
+pnpm format
+```
+
+### リント
+
+```bash
+pnpm lint
+```
+
+### 型チェック
+
+```bash
+pnpm type-check
+```
+
+## トラブルシューティング
+
+### editor-homeに接続できない
+
+1. editor-homeが起動しているか確認
+2. `.env.local`の`NEXT_PUBLIC_EDITOR_HOME_URL`が正しいか確認
+3. ブラウザのコンソールでエラーを確認
+
+### メディアがアップロードできない
+
+1. コンテンツが選択されているか確認
+2. ファイルが画像または動画形式か確認
+3. ファイルサイズが大きすぎないか確認
+
+### 保存できない
+
+1. コンテンツが選択されているか確認
+2. スラッグが入力されているか確認
+3. スラッグが既に使用されていないか確認
