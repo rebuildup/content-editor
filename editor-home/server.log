@@ -1,0 +1,78 @@
+
+> editor-home@0.1.0 dev /Users/ubecomputerclub/Desktop/2025/content-editor/editor-home
+> next dev
+
+   ▲ Next.js 16.0.0 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.2.116:3000
+
+ ✓ Starting...
+ ✓ Ready in 329ms
+POST /api/markdown - Received data: {
+  contentId: 'test',
+  slug: 'test-page-8',
+  frontmatter: { title: 'テストページ8', date: '2025-01-27T00:00:00.000Z' },
+  body: '# テストページ8\n\nこれはテストページ8です。',
+  status: 'draft'
+}
+POST /api/markdown - Page data: {
+  id: 'md_1761351671347',
+  contentId: 'test',
+  slug: 'test-page-8',
+  frontmatter: { title: 'テストページ8', date: '2025-01-27T00:00:00.000Z' },
+  body: '# テストページ8\n\nこれはテストページ8です。',
+  path: undefined,
+  lang: 'ja',
+  status: 'draft',
+  createdAt: '2025-10-25T00:21:11.347Z',
+  updatedAt: '2025-10-25T00:21:11.347Z'
+}
+POST /api/markdown - Saving page...
+POST /api/markdown error: SqliteError: FOREIGN KEY constraint failed
+    at saveMarkdownPage (app/lib/markdown-mapper.ts:227:8)
+    at POST (app/api/markdown/route.ts:103:21)
+  225 |
+  226 |   const values = fields.map(field => row[field as keyof typeof row]);
+> 227 |   stmt.run(...values);
+      |        ^
+  228 | }
+  229 |
+  230 | // ========== Markdownページ削除 ========== {
+  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'
+}
+ POST /api/markdown 500 in 212ms (compile: 132ms, render: 81ms)
+ GET /api/contents 200 in 39ms (compile: 35ms, render: 3ms)
+POST /api/markdown - Received data: {
+  contentId: 'test',
+  slug: 'test-page-9',
+  frontmatter: { title: 'テストページ9', date: '2025-01-27T00:00:00.000Z' },
+  body: '# テストページ9\n\nこれはテストページ9です。',
+  status: 'draft'
+}
+POST /api/markdown - Page data: {
+  id: 'md_1761351678914',
+  contentId: 'test',
+  slug: 'test-page-9',
+  frontmatter: { title: 'テストページ9', date: '2025-01-27T00:00:00.000Z' },
+  body: '# テストページ9\n\nこれはテストページ9です。',
+  path: undefined,
+  lang: 'ja',
+  status: 'draft',
+  createdAt: '2025-10-25T00:21:18.914Z',
+  updatedAt: '2025-10-25T00:21:18.914Z'
+}
+POST /api/markdown - Saving page...
+POST /api/markdown error: SqliteError: FOREIGN KEY constraint failed
+    at saveMarkdownPage (app/lib/markdown-mapper.ts:227:8)
+    at POST (app/api/markdown/route.ts:103:21)
+  225 |
+  226 |   const values = fields.map(field => row[field as keyof typeof row]);
+> 227 |   stmt.run(...values);
+      |        ^
+  228 | }
+  229 |
+  230 | // ========== Markdownページ削除 ========== {
+  code: 'SQLITE_CONSTRAINT_FOREIGNKEY'
+}
+ POST /api/markdown 500 in 38ms (compile: 1550µs, render: 36ms)
+[?25h

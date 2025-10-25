@@ -10,6 +10,18 @@ import type { Content } from "@/types/content";
 
 export const runtime = "nodejs";
 
+// ========== OPTIONS: CORS preflight ==========
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
+}
+
 // ========== GET: コンテンツ一覧取得 ==========
 export async function GET(req: Request) {
   try {

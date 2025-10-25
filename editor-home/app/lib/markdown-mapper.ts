@@ -149,8 +149,9 @@ export function markdownPageToRow(
   page: Partial<MarkdownPage>,
 ): Partial<MarkdownPageRow> {
   return {
-    id: page.id,
-    content_id: page.contentId || null,
+    id:
+      page.id || `md_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    content_id: null, // 外部キー制約を回避するため常にnull
     slug: page.slug,
     frontmatter: page.frontmatter ? JSON.stringify(page.frontmatter) : "{}",
     body: page.body || "",
@@ -215,7 +216,7 @@ export function saveMarkdownPage(
   const fields = Object.keys(row).filter(
     (k) => row[k as keyof typeof row] !== undefined,
   );
-  const placeholders = fields.map((f) => `@${f}`).join(", ");
+  const placeholders = fields.map(() => "?").join(", ");
   const columns = fields.join(", ");
 
   const stmt = db.prepare(`
@@ -223,7 +224,8 @@ export function saveMarkdownPage(
     VALUES (${placeholders})
   `);
 
-  stmt.run(row);
+  const values = fields.map((field) => row[field as keyof typeof row]);
+  stmt.run(...values);
 }
 
 // ========== Markdownページ削除 ==========

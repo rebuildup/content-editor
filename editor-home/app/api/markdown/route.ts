@@ -10,6 +10,18 @@ import type { MarkdownFile, MarkdownPage } from "@/types/markdown";
 
 export const runtime = "nodejs";
 
+// ========== OPTIONS: CORS preflight ==========
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
+}
+
 // ========== GET: Markdownページ一覧または個別取得 ==========
 export async function GET(req: Request) {
   try {
@@ -64,6 +76,8 @@ export async function POST(req: Request) {
     const db = (await import("@/app/lib/db")).default;
     const data = await req.json();
 
+    console.log("POST /api/markdown - Received data:", data);
+
     // Markdownファイル形式でのインポート
     if (data.file) {
       const file: MarkdownFile = data.file;
@@ -86,6 +100,8 @@ export async function POST(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
+    console.log("POST /api/markdown - Page data:", page);
+
     // スラッグの重複チェック
     if (!page.slug) {
       return Response.json({ error: "Slug is required" }, { status: 400 });
@@ -95,9 +111,22 @@ export async function POST(req: Request) {
       return Response.json({ error: "Slug already exists" }, { status: 400 });
     }
 
+    console.log("POST /api/markdown - Saving page...");
     saveMarkdownPage(db, page);
+    console.log("POST /api/markdown - Page saved successfully");
 
-    return Response.json({ ok: true, id: page.id, slug: page.slug });
+    // 保存後にIDを取得
+    if (!page.slug) {
+      return Response.json({ error: "Slug is required" }, { status: 400 });
+    }
+    const savedPage = getMarkdownPage(db, page.slug);
+    if (!savedPage) {
+      console.error("POST /api/markdown - Failed to retrieve saved page");
+      return Response.json({ error: "Failed to save page" }, { status: 500 });
+    }
+
+    console.log("POST /api/markdown - Saved page:", savedPage);
+    return Response.json({ ok: true, id: savedPage.id, slug: savedPage.slug });
   } catch (error) {
     console.error("POST /api/markdown error:", error);
     return Response.json(

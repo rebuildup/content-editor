@@ -4,15 +4,14 @@
  */
 
 export interface ContentIndexItem {
-    id: string;
-    title: string;
-    summary?: string;
-    lang?: string;
-    status?: string;
-    visibility?: string;
-    createdAt: string;
-    updatedAt: string;
-    publishedAt?: string;
-    tags?: string[];
+  id: string;
+  title: string;
+  summary?: string;
+  lang?: string;
+  status?: string;
+  visibility?: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+  tags?: string[];
 }
-

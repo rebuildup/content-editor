@@ -1,8 +1,7 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import type { ContentIndexItem } from "@/types/content";
-import { fetchContentList } from "@/lib/api-client";
-import { useEffect, useState } from "react";
 
 interface ContentSelectorProps {
   selectedContentId?: string;
@@ -17,22 +16,37 @@ export function ContentSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadContents();
-  }, []);
-
-  const loadContents = async () => {
+  const loadContents = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchContentList();
+      console.log("Loading contents from API...");
+
+      // 直接fetchを使用してAPIをテスト
+      const response = await fetch("http://localhost:3000/api/contents");
+      console.log("Direct fetch response:", response);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Contents loaded:", data);
       setContents(data);
     } catch (err) {
-      setError("コンテンツの読み込みに失敗しました");
-      console.error(err);
+      console.error("Failed to load contents:", err);
+      setError(
+        `コンテンツの読み込みに失敗しました: ${
+          err instanceof Error ? err.message : "不明なエラー"
+        }`
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadContents();
+  }, [loadContents]);
 
   if (loading) {
     return (
@@ -46,7 +60,8 @@ export function ContentSelector({
         style={{
           padding: "16px",
           color: "#dc2626",
-          backgroundColor: "#fef2f2",
+          backgroundColor: "#1f1f1f",
+          border: "1px solid #dc2626",
           borderRadius: "8px",
         }}
       >
@@ -74,12 +89,23 @@ export function ContentSelector({
         onChange={(e) => onSelect(e.target.value)}
         style={{
           width: "100%",
-          padding: "8px 12px",
+          padding: "12px 16px",
           fontSize: "14px",
-          border: "1px solid #d1d5db",
-          borderRadius: "6px",
-          backgroundColor: "white",
+          border: "2px solid #333333",
+          borderRadius: "8px",
+          backgroundColor: "#111111",
+          color: "#ffffff",
           cursor: "pointer",
+          transition: "border-color 0.2s, background-color 0.2s",
+          outline: "none",
+        }}
+        onFocus={(e) => {
+          e.target.style.borderColor = "#666666";
+          e.target.style.backgroundColor = "#222222";
+        }}
+        onBlur={(e) => {
+          e.target.style.borderColor = "#333333";
+          e.target.style.backgroundColor = "#111111";
         }}
       >
         <option value="">-- コンテンツを選択してください --</option>
@@ -90,11 +116,10 @@ export function ContentSelector({
         ))}
       </select>
       {selectedContentId && (
-        <p style={{ marginTop: "8px", fontSize: "12px", color: "#6b7280" }}>
+        <p style={{ marginTop: "8px", fontSize: "12px", color: "#cccccc" }}>
           選択中: {contents.find((c) => c.id === selectedContentId)?.title}
         </p>
       )}
     </div>
   );
 }
-
