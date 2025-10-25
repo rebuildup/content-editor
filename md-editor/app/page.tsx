@@ -68,6 +68,8 @@ const TOOLS = {
 const getPlugins = (contentId: string) => {
   console.log("=== getPlugins called ===");
   console.log("contentId:", contentId);
+   const pluginContentId = contentId || 'temp-id';
+
 
   const plugins = [
     Paragraph,
@@ -80,8 +82,10 @@ const getPlugins = (contentId: string) => {
     TodoList,
     Code,
     Link,
-    contentId ? createCustomImagePlugin(contentId) : Image,
-    contentId ? createCustomVideoPlugin(contentId) : Video,
+ createCustomImagePlugin(pluginContentId),
+    createCustomVideoPlugin(pluginContentId),createCustomImagePlugin(pluginContentId),
+    createCustomVideoPlugin(pluginContentId),createCustomImagePlugin(pluginContentId),
+    createCustomVideoPlugin(pluginContentId),   contentId ? createCustomVideoPlugin(contentId) : Video,
     File,
     Callout,
     Divider,
