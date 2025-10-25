@@ -13,7 +13,6 @@ import YooptaEditor, {
 import Embed from "@yoopta/embed";
 import File from "@yoopta/file";
 import { HeadingOne, HeadingThree, HeadingTwo } from "@yoopta/headings";
-import Image from "@yoopta/image";
 import Link from "@yoopta/link";
 import LinkTool, { DefaultLinkToolRender } from "@yoopta/link-tool";
 import { BulletedList, NumberedList, TodoList } from "@yoopta/lists";
@@ -28,7 +27,6 @@ import {
 import Paragraph from "@yoopta/paragraph";
 import Table from "@yoopta/table";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
-import Video from "@yoopta/video";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ContentSelector } from "@/components/content-selector";
 import { createCustomImagePlugin } from "@/components/custom-image-plugin";
@@ -46,6 +44,7 @@ import {
   convertYooptaToMarkdown,
 } from "@/lib/yoopta-to-markdown";
 import type { MarkdownPage } from "@/types/markdown";
+import type { MediaItem } from "@/types/media";
 
 const MARKS = [Bold, Italic, CodeMark, Underline, Strike, Highlight];
 
@@ -66,10 +65,7 @@ const TOOLS = {
 
 // プラグインを動的に生成（selectedContentIdに依存）
 const getPlugins = (contentId: string) => {
-  console.log("=== getPlugins called ===");
-  console.log("contentId:", contentId);
-   const pluginContentId = contentId || 'temp-id';
-
+  const pluginContentId = contentId || "temp-id";
 
   const plugins = [
     Paragraph,
@@ -82,10 +78,8 @@ const getPlugins = (contentId: string) => {
     TodoList,
     Code,
     Link,
- createCustomImagePlugin(pluginContentId),
-    createCustomVideoPlugin(pluginContentId),createCustomImagePlugin(pluginContentId),
-    createCustomVideoPlugin(pluginContentId),createCustomImagePlugin(pluginContentId),
-    createCustomVideoPlugin(pluginContentId),   contentId ? createCustomVideoPlugin(contentId) : Video,
+    createCustomImagePlugin(pluginContentId),
+    createCustomVideoPlugin(pluginContentId),
     File,
     Callout,
     Divider,
@@ -94,7 +88,6 @@ const getPlugins = (contentId: string) => {
     Embed,
   ];
 
-  console.log("Generated plugins:", plugins);
   return plugins;
 };
 
@@ -126,22 +119,8 @@ export default function Home() {
     }
   }, [value]);
 
-  // デバッグ用：エディタの状態をログ出力
-  useEffect(() => {
-    console.log("Editor value changed:", value);
-    console.log("Editor value keys:", Object.keys(value));
-  }, [value]);
-
-  // selectedContentIdの変化を監視
-  useEffect(() => {
-    console.log("=== selectedContentId changed ===");
-    console.log("selectedContentId:", selectedContentId);
-  }, [selectedContentId]);
-
   // プラグインをメモ化
   const plugins = useMemo(() => {
-    console.log("=== useMemo plugins ===");
-    console.log("selectedContentId:", selectedContentId);
     return getPlugins(selectedContentId);
   }, [selectedContentId]);
   const [currentPage, setCurrentPage] = useState<MarkdownPage | null>(null);
@@ -152,7 +131,7 @@ export default function Home() {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [mediaList, setMediaList] = useState<any[]>([]);
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
 
   // メディア一覧を読み込み
   const loadMediaList = useCallback(async () => {
@@ -177,7 +156,7 @@ export default function Home() {
   const handleMediaInsert = (mediaUrl: string) => {
     // 画像を挿入（簡易版）
     alert(
-      `メディアURL: ${mediaUrl}\n\nマークダウンとして挿入:\n![画像](${mediaUrl})`
+      `メディアURL: ${mediaUrl}\n\nマークダウンとして挿入:\n![画像](${mediaUrl})`,
     );
   };
 
@@ -195,7 +174,7 @@ export default function Home() {
   // 画像データをデータベースに保存する関数
   const saveImageToDatabase = async (
     imageDataUrl: string,
-    filename: string
+    filename: string,
   ) => {
     try {
       console.log("Saving image to database:", filename);
@@ -208,11 +187,12 @@ export default function Home() {
         bytes[i] = binaryData.charCodeAt(i);
       }
 
-      // ファイルオブジェクトを作成
+      // ファイルオブジェクトを作成（Node.js環境対応）
       const blob = new Blob([bytes], { type: "image/jpeg" });
-      const file = new (globalThis as any).File([blob], filename, {
+      const file = Object.assign(blob, {
+        name: filename,
         type: "image/jpeg",
-      });
+      }) as File;
 
       // データベースに保存
       if (!selectedContentId) {
@@ -254,15 +234,20 @@ export default function Home() {
       let markdown = getEditorContent();
       console.log("Saving markdown content:", markdown);
 
-      // 画像のDataURLをデータベースに保存して置換
+      // 画像と動画のDataURLをデータベースに保存して置換
       if (value && Object.keys(value).length > 0) {
         const imageBlocks = Object.values(value).filter(
-          (block) => block.type === "Image"
+          (block) => block.type === "Image",
+        );
+        const videoBlocks = Object.values(value).filter(
+          (block) => block.type === "Video",
         );
 
+        // 画像の処理
         for (const block of imageBlocks) {
           const imageElement = block.value.find(
-            (child: any) => child.type === "image"
+            // biome-ignore lint/suspicious/noExplicitAny: Yooptaの型定義が複雑なため
+            (child: any) => child.type === "image",
           );
           if (
             imageElement &&
@@ -274,7 +259,7 @@ export default function Home() {
               const filename = `image_${Date.now()}.jpg`;
               const result = await saveImageToDatabase(
                 (imageElement as { props: { src: string } }).props.src,
-                filename
+                filename,
               );
               if (!selectedContentId) {
                 throw new Error("Content ID is required");
@@ -284,12 +269,58 @@ export default function Home() {
               // Markdown内のDataURLをデータベースURLに置換
               markdown = markdown.replace(
                 (imageElement as { props: { src: string } }).props.src,
-                mediaUrl
+                mediaUrl,
               );
 
               console.log("Replaced image URL:", mediaUrl);
             } catch (error) {
               console.error("Failed to save image:", error);
+            }
+          }
+        }
+
+        // 動画の処理
+        for (const block of videoBlocks) {
+          const videoElement = block.value.find(
+            // biome-ignore lint/suspicious/noExplicitAny: Yooptaの型定義が複雑なため
+            (child: any) => child.type === "video",
+          );
+          if (
+            videoElement &&
+            (
+              videoElement as { props?: { src?: string } }
+            )?.props?.src?.startsWith("blob:")
+          ) {
+            try {
+              // blob URLからファイルを取得
+              const response = await fetch(
+                (videoElement as { props: { src: string } }).props.src,
+              );
+              const blob = await response.blob();
+              const filename = `video_${Date.now()}.mp4`;
+
+              // ファイルオブジェクトを作成（Node.js環境対応）
+              const file = Object.assign(blob, {
+                name: filename,
+                type: "video/mp4",
+              }) as File;
+
+              // データベースに保存
+              if (!selectedContentId) {
+                throw new Error("Content ID is required");
+              }
+              const result = await uploadMediaFile(selectedContentId, file);
+              const mediaUrl = getMediaUrl(selectedContentId, result.id);
+
+              // Markdown内のblob URLをデータベースURLに置換
+              markdown = markdown.replace(
+                (videoElement as { props: { src: string } }).props.src,
+                mediaUrl,
+              );
+
+              console.log("Replaced video URL:", mediaUrl);
+            } catch (error) {
+              console.error("Failed to save video:", error);
             }
           }
         }
@@ -569,8 +600,6 @@ export default function Home() {
         <ContentSelector
           selectedContentId={selectedContentId}
           onSelect={(contentId) => {
-            console.log("=== ContentSelector onSelect called ===");
-            console.log("contentId:", contentId);
             setSelectedContentId(contentId);
           }}
         />
@@ -832,7 +861,7 @@ export default function Home() {
                       onClick={() => {
                         const mediaUrl = getMediaUrl(
                           selectedContentId,
-                          media.id
+                          media.id,
                         );
                         handleMediaInsert(mediaUrl);
                       }}
@@ -850,7 +879,7 @@ export default function Home() {
                             width: "40px",
                             height: "40px",
                             backgroundColor: media.mimeType?.startsWith(
-                              "image/"
+                              "image/",
                             )
                               ? "#2563eb"
                               : "#dc2626",
@@ -930,14 +959,12 @@ export default function Home() {
       >
         <YooptaEditor
           editor={editor}
-          plugins={plugins}
+          plugins={plugins as unknown as never}
           tools={TOOLS}
           marks={MARKS}
           placeholder="テキストを入力するか、「/」でコマンドメニューを開く..."
           value={value}
           onChange={(newValue) => {
-            console.log("Yoopta onChange triggered:", newValue);
-            console.log("New value keys:", Object.keys(newValue));
             setValue(newValue);
           }}
           autoFocus={true}

@@ -37,7 +37,7 @@ export function ContentSelector({
       setError(
         `コンテンツの読み込みに失敗しました: ${
           err instanceof Error ? err.message : "不明なエラー"
-        }`
+        }`,
       );
     } finally {
       setLoading(false);

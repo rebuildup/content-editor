@@ -1,46 +1,29 @@
 "use client";
 
-import type { YooptaPlugin } from "@yoopta/editor";
 import Image from "@yoopta/image";
 
 export function createCustomImagePlugin(contentId: string) {
-  console.log("=== createCustomImagePlugin called ===");
-  console.log("contentId:", contentId);
+  console.log("Image plugin created for contentId:", contentId);
 
-  // Yooptaエディタのプラグインを拡張
-  // extendメソッドを使用してオプションを設定
   const customPlugin = Image.extend({
     options: {
       onUpload: async (file: File) => {
-        try {
-          console.log("=== Custom Image Plugin Upload ===");
-          console.log("Uploading media file:", file.name);
-          console.log("File type:", file.type);
-          console.log("File size:", file.size);
-          console.log("Content ID:", contentId);
-          console.log("Starting upload process...");
+        console.log("Image upload started:", file.name, file.type);
 
+        try {
           // 画像の場合はDataURLを生成してローカル表示
           if (file.type.startsWith("image/")) {
             return new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = (e) => {
                 const dataUrl = e.target?.result as string;
-                console.log(
-                  "Local data URL generated:",
-                  `${dataUrl.substring(0, 50)}...`
-                );
+                console.log("Image data URL created");
 
                 const img = new window.Image();
                 img.onload = () => {
-                  console.log(
-                    "Image loaded successfully:",
-                    img.width,
-                    "x",
-                    img.height
-                  );
+                  console.log("Image loaded:", img.width, "x", img.height);
                   resolve({
-                    src: dataUrl, // DataURLを返す
+                    src: dataUrl,
                     alt: file.name,
                     sizes: {
                       width: img.width,
@@ -62,7 +45,7 @@ export function createCustomImagePlugin(contentId: string) {
             });
           }
 
-          // 動画の場合はデフォルトサイズ
+          // デフォルトサイズ
           return {
             src: URL.createObjectURL(file),
             alt: file.name,
@@ -72,32 +55,22 @@ export function createCustomImagePlugin(contentId: string) {
             },
           };
         } catch (error) {
-          console.error("Failed to process media:", error);
-          console.error("Error details:", {
-            message: error instanceof Error ? error.message : "不明なエラー",
-            stack: error instanceof Error ? error.stack : undefined,
-            name: error instanceof Error ? error.name : undefined,
-          });
+          console.error("Image upload failed:", error);
           throw new Error(
             `メディアの処理に失敗しました: ${
               error instanceof Error ? error.message : "不明なエラー"
-            }`
+            }`,
           );
         }
       },
       onError: (error: Error) => {
         console.error("Image plugin error:", error);
         alert(
-          `画像のアップロードに失敗しました: ${error.message || "不明なエラー"}`
+          `画像のアップロードに失敗しました: ${error.message || "不明なエラー"}`,
         );
       },
     },
-  }) as any;
-
-  console.log("=== Custom Image Plugin created ===");
-  console.log("Plugin:", customPlugin);
-  console.log("Plugin type:", typeof customPlugin);
-  console.log("Plugin constructor:", customPlugin.constructor.name);
+  });
 
   return customPlugin;
 }

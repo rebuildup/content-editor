@@ -164,10 +164,17 @@ export function convertYooptaToMarkdown(value: YooptaContentValue): string {
   return lines.join("\n").trim();
 }
 
+// Yooptaの型定義（Slateの型と互換性を保つ）
+interface YooptaNode {
+  type?: string;
+  text?: string;
+  children?: unknown[];
+}
+
 /**
  * Yooptaのコンテンツからプレーンテキストを抽出
  */
-function extractText(content: any[]): string {
+function extractText(content: YooptaNode[]): string {
   if (!content || content.length === 0) return "";
 
   const texts: string[] = [];
@@ -177,20 +184,35 @@ function extractText(content: any[]): string {
       for (const child of item.children) {
         if (typeof child === "string") {
           texts.push(child);
-        } else if (child.text) {
+        } else if (
+          typeof child === "object" &&
+          child !== null &&
+          "text" in child
+        ) {
+          const textNode = child as {
+            text: string;
+            bold?: boolean;
+            italic?: boolean;
+            underline?: boolean;
+            strike?: boolean;
+            code?: boolean;
+            highlight?: boolean;
+          };
           // マークをMarkdownに変換
-          let text = child.text;
+          let text = textNode.text;
 
-          if (child.bold) text = `**${text}**`;
-          if (child.italic) text = `*${text}*`;
-          if (child.underline) text = `<u>${text}</u>`;
-          if (child.strike) text = `~~${text}~~`;
-          if (child.code) text = `\`${text}\``;
-          if (child.highlight) text = `==${text}==`;
+          if (textNode.bold) text = `**${text}**`;
+          if (textNode.italic) text = `*${text}*`;
+          if (textNode.underline) text = `<u>${text}</u>`;
+          if (textNode.strike) text = `~~${text}~~`;
+          if (textNode.code) text = `\`${text}\``;
+          if (textNode.highlight) text = `==${text}==`;
 
           texts.push(text);
         }
       }
+    } else if (item.text) {
+      texts.push(item.text);
     }
   }
 
