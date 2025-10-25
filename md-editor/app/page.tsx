@@ -279,8 +279,10 @@ export default function Home() {
   }, [selectedContentId, loadArticles, loadMedia]);
 
   const resetEditor = useCallback(() => {
-    setValue(INITIAL_VALUE);
-    setOriginalContent("");
+    // 空行を維持するため、空の段落ブロックを作成
+    const emptyValue = convertMarkdownToYoopta("\n");
+    setValue(emptyValue);
+    setOriginalContent("\n");
     setHasChanges(false);
   }, []);
 
@@ -333,17 +335,23 @@ export default function Home() {
           resetEditor();
         }
       } else {
-        console.log("Article body is empty, setting empty editor");
-        setValue({});
-        setOriginalContent("");
+        console.log(
+          "Article body is empty, setting empty editor with one empty line"
+        );
+        // 空の記事の場合は1行分の空行を維持するため、空の段落ブロックを作成
+        const emptyValue = convertMarkdownToYoopta("\n");
+        setValue(emptyValue);
+        setOriginalContent("\n");
         setHasChanges(false);
 
         // エディターの更新を安全に実行
         setTimeout(() => {
           try {
             if (editor?.setEditorValue) {
-              editor.setEditorValue({});
-              console.log("Empty editor value set successfully");
+              editor.setEditorValue(emptyValue);
+              console.log(
+                "Empty editor value with empty line set successfully"
+              );
             }
           } catch (editorError) {
             console.warn("Empty editor update failed:", editorError);
@@ -387,18 +395,18 @@ export default function Home() {
       setOriginalContent(markdown);
       setHasChanges(false);
       console.log("Save completed - hasChanges set to false");
-      
+
       if (updated) {
         // 現在のページ情報のみ更新（エディターの内容は保持）
         // 保存処理中はfocusArticleを実行しないように、直接currentPageを更新
-        setCurrentPage(prev => ({
+        setCurrentPage((prev) => ({
           ...prev,
-          ...updated
+          ...updated,
         }));
         // エディターの内容は変更せず、originalContentのみ更新
         setOriginalContent(updated.body || markdown);
       }
-      
+
       // 保存後は確実にhasChangesをfalseに設定（最後に実行）
       setTimeout(() => {
         setHasChanges(false);
