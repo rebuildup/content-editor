@@ -228,7 +228,26 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
   let order = 0;
 
   for (const line of lines) {
-    if (line.trim() === "") continue;
+    // 空白行も保持する
+    if (line.trim() === "") {
+      const blockId = `block-${Date.now()}-${order}`;
+      const textId = `text-${Date.now()}-${order}`;
+
+      blocks[blockId] = {
+        id: blockId,
+        type: "Paragraph",
+        meta: { order, depth: 0 },
+        value: [
+          {
+            id: textId,
+            type: "paragraph",
+            children: [{ text: "" }],
+          },
+        ],
+      };
+      order++;
+      continue;
+    }
 
     const blockId = `block-${Date.now()}-${order}`;
     const textId = `text-${Date.now()}-${order}`;

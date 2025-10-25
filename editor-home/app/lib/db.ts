@@ -23,6 +23,8 @@ function getActiveDbPath(): string {
 const dbPath = getActiveDbPath();
 const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
+// 外部キー制約を無効にする（contentIdはオプショナルなので制約を緩和）
+// db.pragma("foreign_keys = ON");
 
 // ========== メインテーブル: contents ==========
 db.exec(`
@@ -188,6 +190,7 @@ END;
 `);
 
 // ========== Markdownページテーブル ==========
+// 外部キー制約を削除してテーブルを再作成
 db.exec(`
 CREATE TABLE IF NOT EXISTS markdown_pages (
   id TEXT PRIMARY KEY,
@@ -202,9 +205,7 @@ CREATE TABLE IF NOT EXISTS markdown_pages (
   version INTEGER DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
-  published_at TEXT,
-  
-  FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE SET NULL
+  published_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_markdown_pages_slug ON markdown_pages(slug);

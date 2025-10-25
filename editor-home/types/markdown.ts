@@ -66,6 +66,9 @@ export interface MarkdownPage {
   /** 状態 */
   status?: "draft" | "published" | "archived";
 
+  /** 公開範囲 */
+  visibility?: "public" | "unlisted" | "private" | "draft";
+
   /** バージョン */
   version?: number;
 

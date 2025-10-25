@@ -49,8 +49,14 @@ export async function fetchContent(
 
 // ========== マークダウンAPI ==========
 
-export async function fetchMarkdownPages(): Promise<MarkdownPage[]> {
-  const response = await fetch(`${EDITOR_HOME_URL}/api/markdown`);
+export async function fetchMarkdownPages(
+  contentId?: string,
+): Promise<MarkdownPage[]> {
+  const url = new URL(`${EDITOR_HOME_URL}/api/markdown`);
+  if (contentId) {
+    url.searchParams.set("contentId", contentId);
+  }
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Failed to fetch markdown pages");
   }
@@ -69,9 +75,12 @@ export async function fetchMarkdownPage(
   return response.json();
 }
 
-export async function createMarkdownPage(
-  data: Partial<MarkdownPage>,
-): Promise<{ ok: boolean; id: string; slug: string }> {
+export async function createMarkdownPage(data: Partial<MarkdownPage>): Promise<{
+  ok: boolean;
+  id: string;
+  slug: string;
+  page?: MarkdownPage | null;
+}> {
   const response = await fetch(`${EDITOR_HOME_URL}/api/markdown`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -86,9 +95,12 @@ export async function createMarkdownPage(
   return response.json();
 }
 
-export async function updateMarkdownPage(
-  data: Partial<MarkdownPage>,
-): Promise<{ ok: boolean }> {
+export async function updateMarkdownPage(data: Partial<MarkdownPage>): Promise<{
+  ok: boolean;
+  id?: string;
+  slug?: string;
+  page?: MarkdownPage | null;
+}> {
   const response = await fetch(`${EDITOR_HOME_URL}/api/markdown`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -105,7 +117,7 @@ export async function updateMarkdownPage(
 
 export async function deleteMarkdownPage(
   idOrSlug: string,
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; id?: string }> {
   const response = await fetch(
     `${EDITOR_HOME_URL}/api/markdown?id=${idOrSlug}`,
     {

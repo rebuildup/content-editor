@@ -27,12 +27,22 @@ import {
 import Paragraph from "@yoopta/paragraph";
 import Table from "@yoopta/table";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ContentSelector } from "@/components/content-selector";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { ArticleList } from "@/components/article-list";
 import { createCustomImagePlugin } from "@/components/custom-image-plugin";
 import { createCustomVideoPlugin } from "@/components/custom-video-plugin";
 import {
   createMarkdownPage,
+  deleteMarkdownPage,
+  deleteMedia,
+  fetchContentList,
+  fetchMarkdownPage,
   fetchMarkdownPages,
   fetchMediaList,
   getMediaUrl,
@@ -43,6 +53,7 @@ import {
   convertMarkdownToYoopta,
   convertYooptaToMarkdown,
 } from "@/lib/yoopta-to-markdown";
+import type { ContentIndexItem } from "@/types/content";
 import type { MarkdownPage } from "@/types/markdown";
 import type { MediaItem } from "@/types/media";
 
@@ -63,35 +74,6 @@ const TOOLS = {
   },
 };
 
-// プラグインを動的に生成（selectedContentIdに依存）
-const getPlugins = (contentId: string) => {
-  const pluginContentId = contentId || "temp-id";
-
-  const plugins = [
-    Paragraph,
-    HeadingOne,
-    HeadingTwo,
-    HeadingThree,
-    Blockquote,
-    NumberedList,
-    BulletedList,
-    TodoList,
-    Code,
-    Link,
-    createCustomImagePlugin(pluginContentId),
-    createCustomVideoPlugin(pluginContentId),
-    File,
-    Callout,
-    Divider,
-    Table,
-    Accordion,
-    Embed,
-  ];
-
-  return plugins;
-};
-
-// 初期値にデフォルトコンテンツを設定
 const INITIAL_VALUE: YooptaContentValue = {
   "welcome-block": {
     id: "welcome-block",
@@ -101,883 +83,915 @@ const INITIAL_VALUE: YooptaContentValue = {
       {
         id: "welcome-text",
         type: "paragraph",
-        children: [{ text: "ここに記事を入力してください..." }],
+        children: [{ text: "ここにコンテンツを入力してください…" }],
       },
     ],
   },
 };
 
+interface MessageState {
+  type: "success" | "error";
+  text: string;
+}
+
 export default function Home() {
   const editor = useMemo(() => createYooptaEditor(), []);
   const [value, setValue] = useState<YooptaContentValue>(INITIAL_VALUE);
-  const [selectedContentId, setSelectedContentId] = useState<string>("");
+  const [contents, setContents] = useState<ContentIndexItem[]>([]);
+  const [contentsLoading, setContentsLoading] = useState(false);
+  const [selectedContentId, setSelectedContentId] = useState("");
 
-  // エディタの初期化を確実に行う
-  useEffect(() => {
-    if (Object.keys(value).length === 0) {
-      setValue(INITIAL_VALUE);
-    }
-  }, [value]);
-
-  // プラグインをメモ化
-  const plugins = useMemo(() => {
-    return getPlugins(selectedContentId);
-  }, [selectedContentId]);
+  const [articles, setArticles] = useState<MarkdownPage[]>([]);
+  const [articlesLoading, setArticlesLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState<MarkdownPage | null>(null);
-  const [slug, setSlug] = useState<string>("");
-  const [title, setTitle] = useState<string>("");
+
+  const [message, setMessage] = useState<MessageState | null>(null);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [originalContent, setOriginalContent] = useState("");
+
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
 
-  // メディア一覧を読み込み
-  const loadMediaList = useCallback(async () => {
-    if (!selectedContentId) return;
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createSlug, setCreateSlug] = useState("");
 
-    try {
-      const media = await fetchMediaList(selectedContentId);
-      setMediaList(media);
-    } catch (err) {
-      console.error("Failed to load media list:", err);
-    }
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingPage, setEditingPage] = useState<MarkdownPage | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+
+  const plugins = useMemo(() => {
+    const pluginContentId = selectedContentId || "temp-id";
+    return [
+      Paragraph,
+      HeadingOne,
+      HeadingTwo,
+      HeadingThree,
+      Blockquote,
+      NumberedList,
+      BulletedList,
+      TodoList,
+      Code,
+      Link,
+      File,
+      Callout,
+      Divider,
+      Table,
+      Accordion,
+      Embed,
+      createCustomImagePlugin(pluginContentId),
+      createCustomVideoPlugin(pluginContentId),
+    ];
   }, [selectedContentId]);
 
-  // コンテンツが選択されたときにメディア一覧を読み込み
-  useEffect(() => {
-    if (selectedContentId) {
-      loadMediaList();
+  const loadContents = useCallback(async () => {
+    try {
+      setContentsLoading(true);
+      const data = await fetchContentList();
+      setContents(data);
+    } catch (error) {
+      console.error("Failed to load contents:", error);
+      setMessage({
+        type: "error",
+        text: "コンテンツ一覧の取得に失敗しました",
+      });
+    } finally {
+      setContentsLoading(false);
     }
-  }, [selectedContentId, loadMediaList]);
+  }, []);
 
-  // メディアをエディタに挿入
-  const handleMediaInsert = (mediaUrl: string) => {
-    // 画像を挿入（簡易版）
-    alert(
-      `メディアURL: ${mediaUrl}\n\nマークダウンとして挿入:\n![画像](${mediaUrl})`,
-    );
-  };
+  const loadArticles = useCallback(async (contentId: string) => {
+    try {
+      setArticlesLoading(true);
+      const pages = await fetchMarkdownPages(contentId);
+      setArticles(
+        pages.sort(
+          (a, b) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        ),
+      );
+    } catch (error) {
+      console.error("Failed to load articles:", error);
+      setMessage({
+        type: "error",
+        text: "記事一覧の取得に失敗しました",
+      });
+    } finally {
+      setArticlesLoading(false);
+    }
+  }, []);
 
-  // Yooptaエディタの内容を取得
-  const getEditorContent = (): string => {
-    console.log("Current editor value:", value);
+  const loadMedia = useCallback(async (contentId?: string) => {
+    if (!contentId) {
+      setMediaList([]);
+      return;
+    }
+    try {
+      setMediaLoading(true);
+      const data = await fetchMediaList(contentId);
+      setMediaList(data);
+    } catch (error) {
+      console.error("Failed to load media:", error);
+      setMessage({
+        type: "error",
+        text: "メディアの取得に失敗しました",
+      });
+    } finally {
+      setMediaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContents();
+  }, [loadContents]);
+
+  const getEditorContent = useCallback((): string => {
     if (!value || Object.keys(value).length === 0) {
       return "";
     }
-    const markdown = convertYooptaToMarkdown(value);
-    console.log("Converted markdown:", markdown);
-    return markdown;
-  };
+    return convertYooptaToMarkdown(value);
+  }, [value]);
 
-  // 画像データをデータベースに保存する関数
-  const saveImageToDatabase = async (
-    imageDataUrl: string,
-    filename: string,
-  ) => {
-    try {
-      console.log("Saving image to database:", filename);
-
-      // DataURLからバイナリデータを抽出
-      const base64Data = imageDataUrl.split(",")[1];
-      const binaryData = atob(base64Data);
-      const bytes = new Uint8Array(binaryData.length);
-      for (let i = 0; i < binaryData.length; i++) {
-        bytes[i] = binaryData.charCodeAt(i);
-      }
-
-      // ファイルオブジェクトを作成（Node.js環境対応）
-      const blob = new Blob([bytes], { type: "image/jpeg" });
-      const file = Object.assign(blob, {
-        name: filename,
-        type: "image/jpeg",
-      }) as File;
-
-      // データベースに保存
-      if (!selectedContentId) {
-        throw new Error("Content ID is required");
-      }
-      const result = await uploadMediaFile(selectedContentId, file);
-      console.log("Image saved to database:", result);
-
-      return result;
-    } catch (error) {
-      console.error("Failed to save image to database:", error);
-      throw error;
-    }
-  };
-
-  // 保存処理
-  const handleSave = async () => {
-    if (!selectedContentId) {
-      setMessage({
-        type: "error",
-        text: "コンテンツを選択してください",
-      });
+  useEffect(() => {
+    if (!currentPage) {
+      setHasChanges(false);
+      setOriginalContent("");
       return;
     }
+    const markdown = getEditorContent();
+    setHasChanges(markdown !== (originalContent || ""));
+  }, [currentPage, originalContent, getEditorContent]);
 
-    if (!slug) {
-      setMessage({
-        type: "error",
-        text: "スラッグを入力してください",
-      });
-      return;
+  // Force editor update when currentPage changes
+  useEffect(() => {
+    if (currentPage && editor) {
+      if (currentPage.body?.trim()) {
+        try {
+          const yooptaValue = convertMarkdownToYoopta(currentPage.body);
+          // エディターの更新を安全に実行
+          setTimeout(() => {
+            try {
+              if (editor.setEditorValue) {
+                editor.setEditorValue(yooptaValue);
+              }
+              setValue(yooptaValue);
+            } catch (updateError) {
+              console.warn("Editor update in useEffect failed:", updateError);
+              setValue(yooptaValue);
+            }
+          }, 100);
+        } catch (error) {
+          console.error("Failed to parse markdown in useEffect:", error);
+        }
+      }
     }
+  }, [currentPage, editor]);
 
-    setSaving(true);
+  useEffect(() => {
+    if (selectedContentId) {
+      loadArticles(selectedContentId);
+      loadMedia(selectedContentId);
+    } else {
+      setArticles([]);
+      setMediaList([]);
+    }
+  }, [selectedContentId, loadArticles, loadMedia]);
+
+  const resetEditor = useCallback(() => {
+    setValue(INITIAL_VALUE);
+    setOriginalContent("");
+    setHasChanges(false);
+  }, []);
+
+  const handleContentSelect = async (contentId: string) => {
+    setSelectedContentId(contentId);
+    setCurrentPage(null);
+    resetEditor();
     setMessage(null);
+  };
 
-    try {
-      // YooptaコンテンツをMarkdownに変換
-      let markdown = getEditorContent();
-      console.log("Saving markdown content:", markdown);
-
-      // 画像と動画のDataURLをデータベースに保存して置換
-      if (value && Object.keys(value).length > 0) {
-        const imageBlocks = Object.values(value).filter(
-          (block) => block.type === "Image",
-        );
-        const videoBlocks = Object.values(value).filter(
-          (block) => block.type === "Video",
-        );
-
-        // 画像の処理
-        for (const block of imageBlocks) {
-          const imageElement = block.value.find(
-            // biome-ignore lint/suspicious/noExplicitAny: Yooptaの型定義が複雑なため
-            (child: any) => child.type === "image",
-          );
-          if (
-            imageElement &&
-            (
-              imageElement as { props?: { src?: string } }
-            )?.props?.src?.startsWith("data:")
-          ) {
-            try {
-              const filename = `image_${Date.now()}.jpg`;
-              const result = await saveImageToDatabase(
-                (imageElement as { props: { src: string } }).props.src,
-                filename,
-              );
-              if (!selectedContentId) {
-                throw new Error("Content ID is required");
-              }
-              const mediaUrl = getMediaUrl(selectedContentId, result.id);
-
-              // Markdown内のDataURLをデータベースURLに置換
-              markdown = markdown.replace(
-                (imageElement as { props: { src: string } }).props.src,
-                mediaUrl,
-              );
-
-              console.log("Replaced image URL:", mediaUrl);
-            } catch (error) {
-              console.error("Failed to save image:", error);
-            }
-          }
-        }
-
-        // 動画の処理
-        for (const block of videoBlocks) {
-          const videoElement = block.value.find(
-            // biome-ignore lint/suspicious/noExplicitAny: Yooptaの型定義が複雑なため
-            (child: any) => child.type === "video",
-          );
-          if (
-            videoElement &&
-            (
-              videoElement as { props?: { src?: string } }
-            )?.props?.src?.startsWith("blob:")
-          ) {
-            try {
-              // blob URLからファイルを取得
-              const response = await fetch(
-                (videoElement as { props: { src: string } }).props.src,
-              );
-              const blob = await response.blob();
-              const filename = `video_${Date.now()}.mp4`;
-
-              // ファイルオブジェクトを作成（Node.js環境対応）
-              const file = Object.assign(blob, {
-                name: filename,
-                type: "video/mp4",
-              }) as File;
-
-              // データベースに保存
-              if (!selectedContentId) {
-                throw new Error("Content ID is required");
-              }
-              const result = await uploadMediaFile(selectedContentId, file);
-              const mediaUrl = getMediaUrl(selectedContentId, result.id);
-
-              // Markdown内のblob URLをデータベースURLに置換
-              markdown = markdown.replace(
-                (videoElement as { props: { src: string } }).props.src,
-                mediaUrl,
-              );
-
-              console.log("Replaced video URL:", mediaUrl);
-            } catch (error) {
-              console.error("Failed to save video:", error);
-            }
-          }
-        }
+  const focusArticle = useCallback(
+    (article: MarkdownPage | null) => {
+      setCurrentPage(article);
+      if (!article) {
+        resetEditor();
+        return;
       }
 
-      const pageData: Partial<MarkdownPage> = {
-        id: currentPage?.id,
+      if (article.body?.trim()) {
+        try {
+          const yooptaValue = convertMarkdownToYoopta(article.body);
+          setValue(yooptaValue);
+          setOriginalContent(article.body);
+          setHasChanges(false);
+          // エディターの更新を安全に実行
+          if (editor?.setEditorValue) {
+            try {
+              editor.setEditorValue(yooptaValue);
+            } catch (editorError) {
+              console.warn(
+                "Editor update failed, but content is set:",
+                editorError,
+              );
+            }
+          }
+        } catch (error) {
+          console.error("Failed to parse markdown:", error);
+          resetEditor();
+        }
+      } else {
+        resetEditor();
+      }
+    },
+    [editor, resetEditor],
+  );
+
+  const handleArticleSelect = (article: MarkdownPage) => {
+    focusArticle(article);
+  };
+
+  const handleSave = async () => {
+    if (!currentPage || !selectedContentId) return;
+
+    try {
+      setSaving(true);
+      const markdown = getEditorContent();
+      const payload: Partial<MarkdownPage> = {
+        id: currentPage.id,
         contentId: selectedContentId,
-        slug,
-        frontmatter: {
-          title: title || "無題",
-          date: new Date().toISOString(),
-        },
+        slug: currentPage.slug,
+        frontmatter: currentPage.frontmatter,
         body: markdown,
-        status: "draft",
+        lang: currentPage.lang || "ja",
+        status: currentPage.status || "draft",
       };
 
-      if (currentPage?.id) {
-        // 更新
-        await updateMarkdownPage(pageData);
-        setMessage({ type: "success", text: "保存しました" });
-      } else {
-        // 新規作成
-        const result = await createMarkdownPage(pageData);
-        setMessage({
-          type: "success",
-          text: `作成しました (ID: ${result.id})`,
-        });
+      const result = await updateMarkdownPage(payload);
+      const updated =
+        result.page ||
+        (await fetchMarkdownPage(currentPage.id).catch(() => null));
 
-        // 現在のページ情報を更新
-        const pages = await fetchMarkdownPages();
-        const newPage = pages.find((p) => p.id === result.id);
-        if (newPage) {
-          setCurrentPage(newPage);
-        }
+      if (updated) {
+        // 保存後はエディターの内容を保持し、originalContentのみ更新
+        setCurrentPage(updated);
+        setOriginalContent(markdown);
+        setHasChanges(false);
+      } else {
+        setOriginalContent(markdown);
+        setHasChanges(false);
       }
-    } catch (err) {
-      console.error("Save error:", err);
+
+      setMessage({ type: "success", text: "記事を保存しました" });
+      loadArticles(selectedContentId);
+    } catch (error) {
+      console.error("Failed to save article:", error);
       setMessage({
         type: "error",
-        text: `保存に失敗しました: ${
-          err instanceof Error ? err.message : "不明なエラー"
-        }`,
+        text: "記事の保存に失敗しました",
       });
     } finally {
       setSaving(false);
     }
   };
 
-  // ページ読み込み
-  const handleLoadPage = async () => {
-    if (!slug) {
+  const handleCreateArticle = async () => {
+    if (!selectedContentId) {
+      setMessage({ type: "error", text: "コンテンツを選択してください" });
+      return;
+    }
+    if (!createTitle.trim() || !createSlug.trim()) {
       setMessage({
         type: "error",
-        text: "スラッグを入力してください",
+        text: "タイトルとスラッグを入力してください",
       });
       return;
     }
 
     try {
-      const pages = await fetchMarkdownPages();
-      const page = pages.find((p) => p.slug === slug);
+      const payload: Partial<MarkdownPage> = {
+        contentId: selectedContentId,
+        slug: createSlug.trim(),
+        frontmatter: {
+          title: createTitle.trim(),
+        },
+        body: "",
+        status: "draft",
+      };
 
-      if (!page) {
-        setMessage({
-          type: "error",
-          text: "ページが見つかりません",
-        });
-        return;
-      }
+      const result = await createMarkdownPage(payload);
+      setMessage({ type: "success", text: "記事を作成しました" });
+      setIsCreateDialogOpen(false);
+      setCreateTitle("");
+      setCreateSlug("");
+      await loadArticles(selectedContentId);
 
-      // ページ情報を設定
-      setCurrentPage(page);
-      setSelectedContentId(page.contentId || "");
-      setTitle(page.frontmatter.title || "");
-      setSlug(page.slug);
-
-      // Markdownをエディタに読み込み
-      if (page.body?.trim()) {
-        try {
-          const yooptaValue = convertMarkdownToYoopta(page.body);
-          setValue(yooptaValue);
-        } catch (convertError) {
-          console.error("Markdown conversion error:", convertError);
-          // 変換に失敗した場合は初期値を使用
-          setValue(INITIAL_VALUE);
-        }
+      const created =
+        result.page || (await fetchMarkdownPage(result.id).catch(() => null));
+      if (created) {
+        focusArticle(created);
       } else {
-        // 空のコンテンツの場合は初期化
-        setValue(INITIAL_VALUE);
+        focusArticle(null);
       }
-
-      setMessage({ type: "success", text: "読み込みました" });
-    } catch (err) {
-      console.error("Load error:", err);
-      setMessage({
-        type: "error",
-        text: `読み込みに失敗しました: ${
-          err instanceof Error ? err.message : "不明なエラー"
-        }`,
-      });
+    } catch (error) {
+      console.error("Failed to create article:", error);
+      setMessage({ type: "error", text: "記事の作成に失敗しました" });
     }
   };
 
-  // 新規作成
-  const handleNew = () => {
-    setCurrentPage(null);
-    setValue(INITIAL_VALUE);
-    setTitle("");
-    setSlug("");
-    setMessage(null);
+  const handleEditMeta = async () => {
+    if (!editingPage) return;
+    if (!editTitle.trim() || !editSlug.trim()) {
+      setMessage({
+        type: "error",
+        text: "タイトルとスラッグを入力してください",
+      });
+      return;
+    }
+
+    try {
+      const payload: Partial<MarkdownPage> = {
+        id: editingPage.id,
+        slug: editSlug.trim(),
+        frontmatter: {
+          ...editingPage.frontmatter,
+          title: editTitle.trim(),
+        },
+      };
+      const result = await updateMarkdownPage(payload);
+      const updated =
+        result.page ||
+        (await fetchMarkdownPage(editingPage.id).catch(() => null));
+      if (updated) {
+        setArticles((prev) =>
+          prev.map((article) =>
+            article.id === updated.id ? updated : article,
+          ),
+        );
+        if (currentPage?.id === updated.id) {
+          focusArticle(updated);
+        }
+      }
+
+      setIsEditDialogOpen(false);
+      setEditingPage(null);
+      loadArticles(selectedContentId);
+      setMessage({ type: "success", text: "記事情報を更新しました" });
+    } catch (error) {
+      console.error("Failed to update article metadata:", error);
+      setMessage({ type: "error", text: "記事情報の更新に失敗しました" });
+    }
+  };
+
+  const handleDeleteArticle = async (page: MarkdownPage) => {
+    if (!confirm("この記事を削除しますか？")) return;
+    try {
+      await deleteMarkdownPage(page.id);
+      setMessage({ type: "success", text: "記事を削除しました" });
+      setIsEditDialogOpen(false);
+      setEditingPage(null);
+      if (currentPage?.id === page.id) {
+        focusArticle(null);
+      }
+      loadArticles(selectedContentId);
+    } catch (error) {
+      console.error("Failed to delete article:", error);
+      setMessage({ type: "error", text: "記事の削除に失敗しました" });
+    }
+  };
+
+  const _handleMediaUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    if (!selectedContentId) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      await uploadMediaFile(selectedContentId, file);
+      setMessage({ type: "success", text: "メディアをアップロードしました" });
+      loadMedia(selectedContentId);
+    } catch (error) {
+      console.error("Failed to upload media:", error);
+      setMessage({
+        type: "error",
+        text: "メディアのアップロードに失敗しました",
+      });
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const replaceInEditor = (transform: (markdown: string) => string) => {
+    const markdown = getEditorContent();
+    const updated = transform(markdown);
+    const yooptaValue = convertMarkdownToYoopta(updated);
+    editor.setEditorValue(yooptaValue);
+    setValue(yooptaValue);
+    return updated;
+  };
+
+  const handleEmbedMedia = (media: MediaItem) => {
+    if (!selectedContentId) return;
+    const url = getMediaUrl(selectedContentId, media.id);
+    replaceInEditor(
+      (markdown) => `${markdown}\n\n![${media.filename}](${url})\n`,
+    );
+    setHasChanges(true);
+  };
+
+  const handleDeleteMedia = async (media: MediaItem) => {
+    if (!selectedContentId) return;
+    if (!confirm(`メディア「${media.filename}」を削除しますか？`)) return;
+    try {
+      await deleteMedia(selectedContentId, media.id);
+      setMessage({ type: "success", text: "メディアを削除しました" });
+      loadMedia(selectedContentId);
+      const url = getMediaUrl(selectedContentId, media.id);
+      replaceInEditor((markdown) => markdown.replaceAll(url, ""));
+      setHasChanges(true);
+    } catch (error) {
+      console.error("Failed to delete media:", error);
+      setMessage({ type: "error", text: "メディアの削除に失敗しました" });
+    }
   };
 
   return (
     <>
-      <style jsx global>{`
-        .yoopta-editor {
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-toolbar {
-          background-color: #333333 !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-toolbar button {
-          color: #ffffff !important;
-          background-color: transparent !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-toolbar button:hover {
-          background-color: #555555 !important;
-        }
-        .yoopta-editor .yoopta-toolbar button.active {
-          background-color: #666666 !important;
-        }
-        .yoopta-editor .yoopta-block {
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block p {
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block h1,
-        .yoopta-editor .yoopta-block h2,
-        .yoopta-editor .yoopta-block h3,
-        .yoopta-editor .yoopta-block h4,
-        .yoopta-editor .yoopta-block h5,
-        .yoopta-editor .yoopta-block h6 {
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block blockquote {
-          border-left: 4px solid #666666 !important;
-          color: #cccccc !important;
-        }
-        .yoopta-editor .yoopta-block code {
-          background-color: #333333 !important;
-          color: #ffffff !important;
-          border: 1px solid #666666 !important;
-        }
-        .yoopta-editor .yoopta-block pre {
-          background-color: #333333 !important;
-          border: 1px solid #666666 !important;
-        }
-        .yoopta-editor .yoopta-block ul,
-        .yoopta-editor .yoopta-block ol {
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block li {
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block-actions {
-          background-color: #333333 !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-block-actions button {
-          color: #ffffff !important;
-          background-color: transparent !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-block-actions button:hover {
-          background-color: #555555 !important;
-        }
-        .yoopta-editor .yoopta-block-actions button.active {
-          background-color: #666666 !important;
-        }
-        .yoopta-editor .yoopta-block-selector {
-          background-color: #333333 !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-block-selector button {
-          color: #ffffff !important;
-          background-color: transparent !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-block-selector button:hover {
-          background-color: #555555 !important;
-        }
-        .yoopta-editor .yoopta-block-selector button.active {
-          background-color: #666666 !important;
-        }
-        .yoopta-editor .yoopta-block-menu {
-          background-color: #333333 !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-block-menu button {
-          color: #ffffff !important;
-          background-color: transparent !important;
-          border: none !important;
-        }
-        .yoopta-editor .yoopta-block-menu button:hover {
-          background-color: #555555 !important;
-        }
-        .yoopta-editor .yoopta-block-menu button.active {
-          background-color: #666666 !important;
-        }
-        .yoopta-editor .yoopta-block-drag-handle {
-          background-color: #333333 !important;
-          border: none !important;
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block-drag-handle:hover {
-          background-color: #555555 !important;
-        }
-        .yoopta-editor .yoopta-block-drag-handle.active {
-          background-color: #666666 !important;
-        }
-        .yoopta-editor .yoopta-block-plus {
-          background-color: #333333 !important;
-          border: none !important;
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block-plus:hover {
-          background-color: #555555 !important;
-        }
-        .yoopta-editor .yoopta-block-plus.active {
-          background-color: #666666 !important;
-        }
-        .yoopta-editor .yoopta-block-menu-trigger {
-          background-color: #333333 !important;
-          border: none !important;
-          color: #ffffff !important;
-        }
-        .yoopta-editor .yoopta-block-menu-trigger:hover {
-          background-color: #555555 !important;
-        }
-        .yoopta-editor .yoopta-block-menu-trigger.active {
-          background-color: #666666 !important;
-        }
-      `}</style>
-      {/* 固定サイドバー */}
       <div
         style={{
-          width: "320px",
-          backgroundColor: "#000000",
-          borderRight: "1px solid #333333",
-          padding: "24px",
-          position: "fixed",
-          top: 0,
-          left: 0,
-          height: "100vh",
-          overflowY: "auto",
-          zIndex: 10,
+          display: "flex",
+          minHeight: "100vh",
+          backgroundColor: "#000",
+          color: "#fff",
         }}
       >
-        <h2
+        <aside
           style={{
-            marginTop: 0,
-            marginBottom: "24px",
-            fontSize: "20px",
-            fontWeight: 700,
-            color: "#ffffff",
-            borderBottom: "2px solid #333333",
-            paddingBottom: "12px",
+            width: "320px",
+            borderRight: "1px solid #1f1f1f",
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
+            backgroundColor: "#050505",
           }}
         >
-          記事設定
-        </h2>
-
-        <ContentSelector
-          selectedContentId={selectedContentId}
-          onSelect={(contentId) => {
-            setSelectedContentId(contentId);
-          }}
-        />
-
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            htmlFor="title-input"
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: 600,
-              fontSize: "14px",
-              color: "#ffffff",
-            }}
-          >
-            タイトル
-          </label>
-          <input
-            id="title-input"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="記事のタイトル"
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              fontSize: "14px",
-              border: "2px solid #333333",
-              borderRadius: "8px",
-              backgroundColor: "#111111",
-              color: "#ffffff",
-              transition: "border-color 0.2s, background-color 0.2s",
-              outline: "none",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = "#666666";
-              e.target.style.backgroundColor = "#222222";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = "#333333";
-              e.target.style.backgroundColor = "#111111";
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            htmlFor="slug-input"
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: 600,
-              fontSize: "14px",
-              color: "#ffffff",
-            }}
-          >
-            スラッグ
-          </label>
-          <input
-            id="slug-input"
-            type="text"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="page-slug"
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              fontSize: "14px",
-              border: "2px solid #333333",
-              borderRadius: "8px",
-              backgroundColor: "#111111",
-              color: "#ffffff",
-              transition: "border-color 0.2s, background-color 0.2s",
-              outline: "none",
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = "#666666";
-              e.target.style.backgroundColor = "#222222";
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = "#333333";
-              e.target.style.backgroundColor = "#111111";
-            }}
-          />
-        </div>
-
-        {message && (
-          <div
-            style={{
-              padding: "12px",
-              marginBottom: "16px",
-              borderRadius: "6px",
-              fontSize: "14px",
-              backgroundColor:
-                message.type === "success" ? "#222222" : "#333333",
-              color: message.type === "success" ? "#ffffff" : "#cccccc",
-            }}
-          >
-            {message.text}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              flex: 1,
-              padding: "12px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              color: "white",
-              backgroundColor: saving ? "#9ca3af" : "#3b82f6",
-              border: "none",
-              borderRadius: "8px",
-              cursor: saving ? "not-allowed" : "pointer",
-              transition: "background-color 0.2s, transform 0.1s",
-              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-            }}
-            onMouseEnter={(e) => {
-              if (!saving) {
-                e.currentTarget.style.backgroundColor = "#2563eb";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!saving) {
-                e.currentTarget.style.backgroundColor = "#3b82f6";
-                e.currentTarget.style.transform = "translateY(0)";
-              }
-            }}
-          >
-            {saving ? "保存中..." : "保存"}
-          </button>
-          <button
-            type="button"
-            onClick={handleNew}
-            style={{
-              padding: "12px 16px",
-              fontSize: "14px",
-              fontWeight: 600,
-              color: "#ffffff",
-              backgroundColor: "#111111",
-              border: "2px solid #333333",
-              borderRadius: "8px",
-              cursor: "pointer",
-              transition:
-                "border-color 0.2s, background-color 0.2s, transform 0.1s",
-              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.5)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#666666";
-              e.currentTarget.style.backgroundColor = "#222222";
-              e.currentTarget.style.transform = "translateY(-1px)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#333333";
-              e.currentTarget.style.backgroundColor = "#111111";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
-            新規
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleLoadPage}
-          style={{
-            width: "100%",
-            padding: "12px 16px",
-            fontSize: "14px",
-            fontWeight: 600,
-            color: "#ffffff",
-            backgroundColor: "#111111",
-            border: "2px solid #333333",
-            borderRadius: "8px",
-            cursor: "pointer",
-            transition:
-              "border-color 0.2s, background-color 0.2s, transform 0.1s",
-            boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.5)",
-            marginBottom: "24px",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "#666666";
-            e.currentTarget.style.backgroundColor = "#222222";
-            e.currentTarget.style.transform = "translateY(-1px)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "#333333";
-            e.currentTarget.style.backgroundColor = "#111111";
-            e.currentTarget.style.transform = "translateY(0)";
-          }}
-        >
-          スラッグで読み込み
-        </button>
-
-        {selectedContentId && (
           <div>
-            <h3>メディア一覧</h3>
-            <div>
-              {mediaList.length === 0 ? (
+            <label
+              htmlFor="content-select"
+              style={{
+                display: "block",
+                fontWeight: 600,
+                marginBottom: "8px",
+              }}
+            >
+              コンテンツを選択
+            </label>
+            <select
+              id="content-select"
+              value={selectedContentId}
+              onChange={(e) => handleContentSelect(e.target.value)}
+              disabled={contentsLoading}
+              style={{
+                width: "100%",
+                padding: "10px 24px 10px 10px",
+                borderRadius: "6px",
+                border: "1px solid #333",
+                backgroundColor: "#111",
+                color: "#fff",
+                appearance: "none",
+                backgroundImage:
+                  'url(\'data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23888888" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>\')',
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 12px center",
+                backgroundSize: "10px",
+              }}
+            >
+              <option value="">-- コンテンツを選択してください --</option>
+              {contents.map((content) => (
+                <option key={content.id} value={content.id}>
+                  {content.title} ({content.id})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {message && (
+            <div
+              style={{
+                border: "1px solid",
+                borderColor: message.type === "success" ? "#15803d" : "#dc2626",
+                backgroundColor:
+                  message.type === "success" ? "#052e16" : "#2a0909",
+                padding: "10px",
+                borderRadius: "6px",
+                fontSize: "13px",
+              }}
+            >
+              {message.text}
+            </div>
+          )}
+
+          {selectedContentId ? (
+            <>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving || !currentPage || !hasChanges}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "6px",
+                  border: "none",
+                  backgroundColor:
+                    saving || !currentPage || !hasChanges ? "#333" : "#2563eb",
+                  color: "#fff",
+                  cursor:
+                    saving || !currentPage || !hasChanges
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {saving ? "保存中…" : "記事を保存"}
+              </button>
+
+              <ArticleList
+                articles={articles}
+                selectedArticleId={currentPage?.id}
+                isLoading={articlesLoading}
+                onSelect={handleArticleSelect}
+                onEdit={(article) => {
+                  setEditingPage(article);
+                  setEditTitle(article.frontmatter.title || "");
+                  setEditSlug(article.slug);
+                  setIsEditDialogOpen(true);
+                }}
+                onNew={() => {
+                  setCreateTitle("");
+                  setCreateSlug("");
+                  setIsCreateDialogOpen(true);
+                }}
+              />
+
+              {currentPage && (
                 <div
                   style={{
-                    textAlign: "center",
-                    padding: "40px 20px",
-                    color: "#888888",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
                   }}
                 >
-                  <div style={{ fontSize: "32px", marginBottom: "12px" }}>
-                    📁
-                  </div>
-                  <p style={{ margin: 0, fontSize: "14px" }}>
-                    メディアがありません
-                  </p>
-                  <p style={{ margin: "8px 0 0 0", fontSize: "12px" }}>
-                    Yooptaエディタで画像や動画をアップロードしてください
-                  </p>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(200px, 1fr))",
-                    gap: "12px",
-                  }}
-                >
-                  {mediaList.map((media) => (
-                    <button
-                      key={media.id}
-                      type="button"
+                  <h4 style={{ margin: 0 }}>メディア</h4>
+                  {mediaLoading ? (
+                    <p style={{ color: "#888", fontSize: "13px" }}>取得中...</p>
+                  ) : mediaList.length === 0 ? (
+                    <p style={{ color: "#888", fontSize: "13px" }}>
+                      メディアがありません。ファイルをアップロードしてください。
+                    </p>
+                  ) : (
+                    <ul
                       style={{
-                        padding: "12px",
-                        backgroundColor: "#1a1a1a",
-                        borderRadius: "8px",
-                        border: "1px solid #333333",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                        position: "relative",
-                        overflow: "hidden",
-                        width: "100%",
-                        textAlign: "left",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "#2a2a2a";
-                        e.currentTarget.style.borderColor = "#555555";
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                        e.currentTarget.style.boxShadow =
-                          "0 4px 12px rgba(0, 0, 0, 0.3)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "#1a1a1a";
-                        e.currentTarget.style.borderColor = "#333333";
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "none";
-                      }}
-                      onClick={() => {
-                        const mediaUrl = getMediaUrl(
-                          selectedContentId,
-                          media.id,
-                        );
-                        handleMediaInsert(mediaUrl);
+                        listStyle: "none",
+                        margin: 0,
+                        padding: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <div
+                      {mediaList.map((media) => (
+                        <li
+                          key={media.id}
                           style={{
-                            width: "40px",
-                            height: "40px",
-                            backgroundColor: media.mimeType?.startsWith(
-                              "image/",
-                            )
-                              ? "#2563eb"
-                              : "#dc2626",
-                            borderRadius: "8px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: "18px",
-                            color: "#ffffff",
-                            flexShrink: 0,
+                            border: "1px solid #1f1f1f",
+                            borderRadius: "6px",
+                            padding: "8px",
                           }}
                         >
-                          {media.mimeType?.startsWith("image/") ? "🖼️" : "🎬"}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div
                             style={{
-                              fontSize: "13px",
-                              color: "#ffffff",
-                              fontWeight: 600,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
+                              display: "flex",
+                              justifyContent: "space-between",
                               marginBottom: "4px",
+                              fontSize: "13px",
                             }}
                           >
-                            {media.filename}
+                            <span>{media.filename}</span>
+                            <span style={{ color: "#999" }}>
+                              {(media.size / 1024).toFixed(1)} KB
+                            </span>
                           </div>
                           <div
                             style={{
-                              fontSize: "11px",
-                              color: "#888888",
                               display: "flex",
-                              alignItems: "center",
                               gap: "8px",
                             }}
                           >
-                            <span>{media.mimeType}</span>
-                            <span>•</span>
-                            <span>{(media.size / 1024).toFixed(1)}KB</span>
+                            <button
+                              type="button"
+                              onClick={() => handleEmbedMedia(media)}
+                              style={{
+                                flex: 1,
+                                padding: "4px 6px",
+                                borderRadius: "4px",
+                                border: "1px solid #3b82f6",
+                                backgroundColor: "transparent",
+                                color: "#3b82f6",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                              }}
+                            >
+                              埋め込み
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMedia(media)}
+                              style={{
+                                flex: 1,
+                                padding: "4px 6px",
+                                borderRadius: "4px",
+                                border: "1px solid #dc2626",
+                                backgroundColor: "transparent",
+                                color: "#dc2626",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                              }}
+                            >
+                              削除
+                            </button>
                           </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "8px",
-                          right: "8px",
-                          backgroundColor: "rgba(0, 0, 0, 0.7)",
-                          color: "#ffffff",
-                          fontSize: "10px",
-                          padding: "2px 6px",
-                          borderRadius: "4px",
-                          opacity: 0.8,
-                        }}
-                      >
-                        {media.mimeType?.startsWith("image/") ? "画像" : "動画"}
-                      </div>
-                    </button>
-                  ))}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
+            </>
+          ) : (
+            <p style={{ color: "#888888", fontSize: "14px" }}>
+              編集したいコンテンツを選択してください。
+            </p>
+          )}
+        </aside>
+
+        <main
+          style={{
+            flex: 1,
+            padding: "32px",
+            minHeight: "100vh",
+          }}
+        >
+          {currentPage ? (
+            <>
+              <div
+                style={{
+                  marginBottom: "16px",
+                  color: "#94a3b8",
+                }}
+              >
+                編集中: {currentPage.frontmatter.title || "（無題）"} /{" "}
+                {currentPage.slug}
+              </div>
+              <YooptaEditor
+                editor={editor}
+                plugins={plugins as unknown as never}
+                tools={TOOLS}
+                marks={MARKS}
+                value={value}
+                onChange={(newValue) => {
+                  setValue(newValue);
+                  // エディターの同期を安全に実行
+                  if (editor?.getEditorValue && editor.setEditorValue) {
+                    try {
+                      const currentValue = editor.getEditorValue();
+                      if (
+                        JSON.stringify(currentValue) !==
+                        JSON.stringify(newValue)
+                      ) {
+                        editor.setEditorValue(newValue);
+                      }
+                    } catch (syncError) {
+                      console.warn("Editor sync failed:", syncError);
+                    }
+                  }
+                }}
+                placeholder="ここに本文を入力するか、/ でコマンドメニューを開いてください…"
+                style={{
+                  width: "100%",
+                  maxWidth: "900px",
+                  margin: "0 auto",
+                  minHeight: "600px",
+                  padding: "32px",
+                  backgroundColor: "transparent",
+                  borderRadius: "16px",
+                  color: "#fff",
+                }}
+              />
+            </>
+          ) : (
+            <div
+              style={{
+                border: "1px dashed #1f1f1f",
+                borderRadius: "12px",
+                padding: "48px",
+                textAlign: "center",
+                color: "#94a3b8",
+                maxWidth: "640px",
+                margin: "0 auto",
+              }}
+            >
+              {selectedContentId
+                ? "記事を選択するか、新規作成してください。"
+                : "コンテンツを選択すると記事を編集できます。"}
             </div>
-          </div>
-        )}
+          )}
+        </main>
       </div>
 
+      {isCreateDialogOpen && (
+        <Modal
+          title="新規記事の作成"
+          onClose={() => setIsCreateDialogOpen(false)}
+        >
+          <label className="modal-label">
+            タイトル
+            <input
+              type="text"
+              value={createTitle}
+              onChange={(e) => setCreateTitle(e.target.value)}
+              className="modal-input"
+              placeholder="例: 新機能のお知らせ"
+            />
+          </label>
+          <label className="modal-label">
+            スラッグ
+            <input
+              type="text"
+              value={createSlug}
+              onChange={(e) => setCreateSlug(e.target.value)}
+              className="modal-input"
+              placeholder="例: product-update"
+            />
+          </label>
+          <div className="modal-actions">
+            <button
+              type="button"
+              onClick={() => setIsCreateDialogOpen(false)}
+              className="modal-button ghost"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={handleCreateArticle}
+              className="modal-button"
+            >
+              作成
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {isEditDialogOpen && editingPage && (
+        <Modal title="記事を編集" onClose={() => setIsEditDialogOpen(false)}>
+          <label className="modal-label">
+            タイトル
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="modal-input"
+            />
+          </label>
+          <label className="modal-label">
+            スラッグ
+            <input
+              type="text"
+              value={editSlug}
+              onChange={(e) => setEditSlug(e.target.value)}
+              className="modal-input"
+            />
+          </label>
+          <div className="modal-actions">
+            <button
+              type="button"
+              onClick={() => handleDeleteArticle(editingPage)}
+              className="modal-button danger"
+            >
+              削除
+            </button>
+            <div style={{ flex: 1 }} />
+            <button
+              type="button"
+              onClick={() => setIsEditDialogOpen(false)}
+              className="modal-button ghost"
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              onClick={handleEditMeta}
+              className="modal-button"
+            >
+              更新
+            </button>
+          </div>
+        </Modal>
+      )}
+      <style jsx global>{`
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.65);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 100;
+        }
+        .modal {
+          width: 100%;
+          max-width: 420px;
+          background: #050505;
+          border: 1px solid #1f1f1f;
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        .modal h3 {
+          margin: 0 0 16px 0;
+        }
+        .modal-label {
+          display: flex;
+          flex-direction: column;
+          font-size: 13px;
+          margin-bottom: 12px;
+          gap: 4px;
+        }
+        .modal-input {
+          padding: 8px 10px;
+          border-radius: 6px;
+          border: 1px solid #333;
+          background: #111;
+          color: #fff;
+        }
+        .modal-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 8px;
+        }
+        .modal-button {
+          padding: 8px 12px;
+          border-radius: 6px;
+          border: none;
+          cursor: pointer;
+        }
+        .modal-button.ghost {
+          background: #1f1f1f;
+          color: #fff;
+        }
+        .modal-button.danger {
+          background: #991b1b;
+          color: #fff;
+        }
+        .modal-button:not(.ghost):not(.danger) {
+          background: #2563eb;
+          color: #fff;
+        }
+      `}</style>
+    </>
+  );
+}
+
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation">
       <div
-        style={{
-          marginLeft: "320px",
-          width: "calc(100% - 320px)",
-          minHeight: "100vh",
-          padding: "20px",
-          backgroundColor: "#000000",
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            onClose();
+          }
         }}
       >
-        <YooptaEditor
-          editor={editor}
-          plugins={plugins as unknown as never}
-          tools={TOOLS}
-          marks={MARKS}
-          placeholder="テキストを入力するか、「/」でコマンドメニューを開く..."
-          value={value}
-          onChange={(newValue) => {
-            setValue(newValue);
-          }}
-          autoFocus={true}
-          style={{
-            width: "100%",
-            maxWidth: "800px",
-            margin: "0 auto",
-            minHeight: "600px",
-            padding: "40px",
-            color: "#ffffff",
-          }}
-        />
+        <h3>{title}</h3>
+        {children}
       </div>
-    </>
+    </div>
   );
 }

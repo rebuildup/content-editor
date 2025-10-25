@@ -148,12 +148,18 @@ export function calculateMarkdownStats(body: string): MarkdownStats {
 export function markdownPageToRow(
   page: Partial<MarkdownPage>,
 ): Partial<MarkdownPageRow> {
+  const frontmatterStr = page.frontmatter
+    ? JSON.stringify(page.frontmatter)
+    : "{}";
+  console.log("markdownPageToRow - frontmatter:", page.frontmatter);
+  console.log("markdownPageToRow - frontmatterStr:", frontmatterStr);
+
   return {
     id:
       page.id || `md_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    content_id: null, // 外部キー制約を回避するため常にnull
+    content_id: page.contentId || null,
     slug: page.slug,
-    frontmatter: page.frontmatter ? JSON.stringify(page.frontmatter) : "{}",
+    frontmatter: frontmatterStr,
     body: page.body || "",
     html_cache: page.htmlCache || null,
     path: page.path || null,
@@ -168,11 +174,39 @@ export function markdownPageToRow(
 
 // ========== データベース行 → MarkdownPage型 ==========
 export function rowToMarkdownPage(row: MarkdownPageRow): MarkdownPage {
+  let frontmatter: MarkdownFrontmatter;
+  try {
+    console.log("rowToMarkdownPage - row.slug:", row.slug);
+    console.log(
+      "rowToMarkdownPage - row.frontmatter type:",
+      typeof row.frontmatter,
+    );
+    console.log(
+      "rowToMarkdownPage - row.frontmatter length:",
+      row.frontmatter?.length,
+    );
+    console.log(
+      "rowToMarkdownPage - row.frontmatter first 50 chars:",
+      row.frontmatter?.substring(0, 50),
+    );
+    frontmatter = JSON.parse(row.frontmatter);
+  } catch (error) {
+    console.error("Failed to parse frontmatter:", error);
+    console.error("Frontmatter string:", row.frontmatter);
+    console.error(
+      "Frontmatter string (JSON):",
+      JSON.stringify(row.frontmatter),
+    );
+    throw new Error(
+      `Failed to parse frontmatter: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
   return {
     id: row.id,
     contentId: row.content_id || undefined,
     slug: row.slug,
-    frontmatter: JSON.parse(row.frontmatter),
+    frontmatter,
     body: row.body,
     htmlCache: row.html_cache || undefined,
     path: row.path || undefined,
@@ -225,7 +259,22 @@ export function saveMarkdownPage(
   `);
 
   const values = fields.map((field) => row[field as keyof typeof row]);
-  stmt.run(...values);
+
+  try {
+    stmt.run(...values);
+  } catch (error) {
+    console.error("Failed to save markdown page:", error);
+    console.error("Row data:", row);
+    console.error("Fields:", fields);
+    console.error("Values:", values);
+    console.error(
+      "SQL:",
+      `INSERT OR REPLACE INTO markdown_pages (${columns}) VALUES (${placeholders})`,
+    );
+    throw new Error(
+      `Failed to save markdown page: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
 }
 
 // ========== Markdownページ削除 ==========
