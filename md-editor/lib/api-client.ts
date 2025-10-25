@@ -8,7 +8,7 @@ import type { MediaItem, MediaUploadRequest } from "@/types/media";
 
 // editor-homeのポートを設定
 const EDITOR_HOME_URL =
-  process.env.NEXT_PUBLIC_EDITOR_HOME_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_EDITOR_HOME_URL || "http://localhost:3020";
 
 console.log("EDITOR_HOME_URL:", EDITOR_HOME_URL);
 

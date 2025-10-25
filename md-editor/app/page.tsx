@@ -74,20 +74,7 @@ const TOOLS = {
   },
 };
 
-const INITIAL_VALUE: YooptaContentValue = {
-  "welcome-block": {
-    id: "welcome-block",
-    type: "Paragraph",
-    meta: { order: 0, depth: 0 },
-    value: [
-      {
-        id: "welcome-text",
-        type: "paragraph",
-        children: [{ text: "ここにコンテンツを入力してください…" }],
-      },
-    ],
-  },
-};
+const INITIAL_VALUE: YooptaContentValue = {};
 
 interface MessageState {
   type: "success" | "error";
@@ -95,7 +82,9 @@ interface MessageState {
 }
 
 export default function Home() {
-  const editor = useMemo(() => createYooptaEditor(), []);
+  const editor = useMemo(() => {
+    return createYooptaEditor();
+  }, []);
   const [value, setValue] = useState<YooptaContentValue>(INITIAL_VALUE);
   const [contents, setContents] = useState<ContentIndexItem[]>([]);
   const [contentsLoading, setContentsLoading] = useState(false);
@@ -169,8 +158,8 @@ export default function Home() {
       setArticles(
         pages.sort(
           (a, b) =>
-            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-        ),
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        )
       );
     } catch (error) {
       console.error("Failed to load articles:", error);
@@ -220,31 +209,61 @@ export default function Home() {
       setOriginalContent("");
       return;
     }
-    const markdown = getEditorContent();
-    setHasChanges(markdown !== (originalContent || ""));
-  }, [currentPage, originalContent, getEditorContent]);
+
+    // エディターの内容が変更されたかどうかを直接チェック
+    const currentMarkdown = getEditorContent();
+    const hasChangesValue = currentMarkdown !== (originalContent || "");
+
+    console.log("hasChanges check:", {
+      currentMarkdown: currentMarkdown.substring(0, 100),
+      originalContent: originalContent?.substring(0, 100),
+      hasChanges: hasChangesValue,
+      valueKeys: Object.keys(value),
+      currentPageId: currentPage.id,
+      currentMarkdownLength: currentMarkdown.length,
+      originalContentLength: originalContent?.length || 0,
+    });
+
+    setHasChanges(hasChangesValue);
+  }, [currentPage, originalContent, value, getEditorContent]);
 
   // Force editor update when currentPage changes
   useEffect(() => {
     if (currentPage && editor) {
+      console.log(
+        "useEffect: currentPage changed",
+        currentPage.id,
+        "body:",
+        currentPage.body?.substring(0, 100)
+      );
       if (currentPage.body?.trim()) {
         try {
           const yooptaValue = convertMarkdownToYoopta(currentPage.body);
+          console.log(
+            "useEffect: converted yoopta value:",
+            Object.keys(yooptaValue)
+          );
+          setValue(yooptaValue);
+          setOriginalContent(currentPage.body);
+          setHasChanges(false);
+
           // エディターの更新を安全に実行
           setTimeout(() => {
             try {
               if (editor.setEditorValue) {
                 editor.setEditorValue(yooptaValue);
+                console.log("useEffect: editor value set successfully");
               }
-              setValue(yooptaValue);
             } catch (updateError) {
               console.warn("Editor update in useEffect failed:", updateError);
-              setValue(yooptaValue);
             }
           }, 100);
         } catch (error) {
           console.error("Failed to parse markdown in useEffect:", error);
         }
+      } else {
+        console.log("useEffect: article body is empty");
+        resetEditor();
       }
     }
   }, [currentPage, editor]);
@@ -280,32 +299,59 @@ export default function Home() {
         return;
       }
 
+      console.log(
+        "Focusing article:",
+        article.id,
+        "body:",
+        article.body?.substring(0, 100)
+      );
+
       if (article.body?.trim()) {
         try {
           const yooptaValue = convertMarkdownToYoopta(article.body);
+          console.log("Converted yoopta value:", Object.keys(yooptaValue));
           setValue(yooptaValue);
           setOriginalContent(article.body);
           setHasChanges(false);
+
           // エディターの更新を安全に実行
-          if (editor?.setEditorValue) {
+          setTimeout(() => {
             try {
-              editor.setEditorValue(yooptaValue);
+              if (editor?.setEditorValue) {
+                editor.setEditorValue(yooptaValue);
+                console.log("Editor value set successfully");
+              }
             } catch (editorError) {
               console.warn(
                 "Editor update failed, but content is set:",
-                editorError,
+                editorError
               );
             }
-          }
+          }, 50);
         } catch (error) {
           console.error("Failed to parse markdown:", error);
           resetEditor();
         }
       } else {
-        resetEditor();
+        console.log("Article body is empty, setting empty editor");
+        setValue({});
+        setOriginalContent("");
+        setHasChanges(false);
+
+        // エディターの更新を安全に実行
+        setTimeout(() => {
+          try {
+            if (editor?.setEditorValue) {
+              editor.setEditorValue({});
+              console.log("Empty editor value set successfully");
+            }
+          } catch (editorError) {
+            console.warn("Empty editor update failed:", editorError);
+          }
+        }, 50);
       }
     },
-    [editor, resetEditor],
+    [editor, resetEditor]
   );
 
   const handleArticleSelect = (article: MarkdownPage) => {
@@ -317,7 +363,11 @@ export default function Home() {
 
     try {
       setSaving(true);
+
+      // 保存前にエディターの内容を取得（変換を避けるため）
       const markdown = getEditorContent();
+      console.log("Saving markdown:", markdown.substring(0, 100));
+
       const payload: Partial<MarkdownPage> = {
         id: currentPage.id,
         contentId: selectedContentId,
@@ -333,18 +383,35 @@ export default function Home() {
         result.page ||
         (await fetchMarkdownPage(currentPage.id).catch(() => null));
 
+      // 保存完了後の状態更新（エディターの内容は変更しない）
+      setOriginalContent(markdown);
+      setHasChanges(false);
+      console.log("Save completed - hasChanges set to false");
+      
       if (updated) {
-        // 保存後はエディターの内容を保持し、originalContentのみ更新
-        setCurrentPage(updated);
-        setOriginalContent(markdown);
-        setHasChanges(false);
-      } else {
-        setOriginalContent(markdown);
-        setHasChanges(false);
+        // 現在のページ情報のみ更新（エディターの内容は保持）
+        // 保存処理中はfocusArticleを実行しないように、直接currentPageを更新
+        setCurrentPage(prev => ({
+          ...prev,
+          ...updated
+        }));
+        // エディターの内容は変更せず、originalContentのみ更新
+        setOriginalContent(updated.body || markdown);
       }
+      
+      // 保存後は確実にhasChangesをfalseに設定（最後に実行）
+      setTimeout(() => {
+        setHasChanges(false);
+        console.log("Final hasChanges set to false");
+      }, 100);
 
+      // 保存完了メッセージを表示
       setMessage({ type: "success", text: "記事を保存しました" });
-      loadArticles(selectedContentId);
+
+      // 記事一覧の再読み込みは非同期で実行（エディターの内容を保持）
+      setTimeout(() => {
+        loadArticles(selectedContentId);
+      }, 100);
     } catch (error) {
       console.error("Failed to save article:", error);
       setMessage({
@@ -425,9 +492,7 @@ export default function Home() {
         (await fetchMarkdownPage(editingPage.id).catch(() => null));
       if (updated) {
         setArticles((prev) =>
-          prev.map((article) =>
-            article.id === updated.id ? updated : article,
-          ),
+          prev.map((article) => (article.id === updated.id ? updated : article))
         );
         if (currentPage?.id === updated.id) {
           focusArticle(updated);
@@ -462,7 +527,7 @@ export default function Home() {
   };
 
   const _handleMediaUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     if (!selectedContentId) return;
     const file = event.target.files?.[0];
@@ -495,7 +560,7 @@ export default function Home() {
     if (!selectedContentId) return;
     const url = getMediaUrl(selectedContentId, media.id);
     replaceInEditor(
-      (markdown) => `${markdown}\n\n![${media.filename}](${url})\n`,
+      (markdown) => `${markdown}\n\n![${media.filename}](${url})\n`
     );
     setHasChanges(true);
   };
@@ -613,7 +678,7 @@ export default function Home() {
                       : "pointer",
                 }}
               >
-                {saving ? "保存中…" : "記事を保存"}
+                {saving ? "保存中…" : hasChanges ? "記事を保存" : "保存済み"}
               </button>
 
               <ArticleList
@@ -761,20 +826,6 @@ export default function Home() {
                 value={value}
                 onChange={(newValue) => {
                   setValue(newValue);
-                  // エディターの同期を安全に実行
-                  if (editor?.getEditorValue && editor.setEditorValue) {
-                    try {
-                      const currentValue = editor.getEditorValue();
-                      if (
-                        JSON.stringify(currentValue) !==
-                        JSON.stringify(newValue)
-                      ) {
-                        editor.setEditorValue(newValue);
-                      }
-                    } catch (syncError) {
-                      console.warn("Editor sync failed:", syncError);
-                    }
-                  }
                 }}
                 placeholder="ここに本文を入力するか、/ でコマンドメニューを開いてください…"
                 style={{
