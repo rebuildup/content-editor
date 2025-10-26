@@ -251,27 +251,59 @@ export function convertYooptaToMarkdown(value: YooptaContentValue): string {
       case "Embed":
         {
           // Yoopta の Embed ブロック:
-          // - もし元の HTML (rawHtml) があればそのまま Markdown に保存する（任意のタグを保持）
-          // - rawHtml がなければ provider.url を使って従来の [Embed](url) 形式を出力する
+          // - 常に rawHtml を優先して保存する
+          // - rawHtml がない場合は provider.url を確認
+          // - provider.url がHTMLタグの場合はそれを rawHtml として扱う
           const node0 = content[0] as { props?: EmbedProps };
           const props = node0.props || {};
-          const rawHtml = props.rawHtml || props.raw || "";
+          let rawHtml = props.rawHtml || props.raw || "";
+
+          // rawHtmlが空で、provider.urlがHTMLタグの場合はそれを使用
+          if (!rawHtml && props.provider?.url) {
+            const url = props.provider.url;
+            if (url.trim().startsWith("<")) {
+              rawHtml = url;
+              console.log("Using provider.url as rawHtml");
+            }
+          }
+
+          console.log("Embed block - rawHtml:", rawHtml ? "present" : "missing");
+          console.log("Embed block - provider:", props.provider);
+          console.log("Embed block - rawHtml content:", rawHtml.substring(0, 100) + (rawHtml.length > 100 ? "..." : ""));
+          console.log("Embed block - rawHtml length:", rawHtml.length);
+
+          // Twitter埋め込みの場合は特別処理
+          if (rawHtml.includes("twitter-tweet") && rawHtml.includes("blockquote")) {
+            console.log("Saving Twitter embed with blockquote");
+          }
+
+          // 埋め込みコンテンツの種類を特定
+          if (rawHtml.includes("youtube.com") || rawHtml.includes("youtu.be")) {
+            console.log("Saving YouTube embed");
+          } else if (rawHtml.includes("discord.com")) {
+            console.log("Saving Discord embed");
+          } else if (rawHtml.includes("google.com") && rawHtml.includes("maps")) {
+            console.log("Saving Google Maps embed");
+          } else if (rawHtml.includes("twitter-tweet")) {
+            console.log("Saving Twitter embed");
+          }
 
           if (rawHtml && typeof rawHtml === "string" && rawHtml.trim() !== "") {
-            // rawHtml を行単位で保持
+            console.log("Saving embed with rawHtml:", rawHtml.length, "characters");
+            // rawHtml を行単位で保持（URLデコードは不要）
             const rawLines = rawHtml.split("\n");
-            for (const rl of rawLines) lines.push(rl);
+            for (const rl of rawLines) {
+              lines.push(rl);
+            }
           } else {
+            console.log("No rawHtml found, using provider URL or empty embed");
             const url = props.provider?.url || props.url || "";
-            // url が生の HTML タグ（例: starts with '<'）を含む場合は
-            // Markdown にそのまま生のHTMLを出力しておく。
-            // これをしないと `[Embed](<iframe ...>)` のように保存され、
-            // ブラウザがその HTML をエンコードしたパスへ GET してしまうことがある。
-            if (typeof url === "string" && url.trim().startsWith("<")) {
-              const rawLines = url.split("\n");
-              for (const rl of rawLines) lines.push(rl);
-            } else {
+            if (url && typeof url === "string" && url.trim() !== "") {
+              // URLが通常のURLの場合
               lines.push(`[Embed](${url})`);
+            } else {
+              // URLもない場合は空の埋め込みとして保存
+              lines.push(`[Embed]()`);
             }
           }
         }
@@ -936,31 +968,84 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
       !trimmed.startsWith("<table>") &&
       !trimmed.startsWith("<details>")
     ) {
+      console.log("Processing HTML embed:", trimmed.substring(0, 50) + "...");
+      console.log("Current line number:", i, "of", lines.length);
       // タグ名を取得
       const tagMatch = trimmed.match(/^<([a-zA-Z0-9-]+)/);
       let rawHtml = line;
       const tagName = tagMatch ? tagMatch[1].toLowerCase() : null;
 
-      // self-closing または 同一行に閉じタグがある場合はそのまま扱う
-      const hasClosingOnSameLine = tagName
-        ? new RegExp(`<\\/${tagName}\\s*>`, "i").test(trimmed)
-        : false;
-      const isSelfClosing = /<[^>]+\/>\s*$/.test(trimmed);
-
-      if (!hasClosingOnSameLine && !isSelfClosing && tagName) {
-        // 複数行に渡る可能性があるため閉じタグが見つかるまで集める
+      // Twitter/Xの埋め込みは特別処理（blockquote + script）
+      if (tagName === "blockquote" && trimmed.includes("twitter-tweet")) {
+        console.log("Processing Twitter embed blockquote");
+        // Twitter埋め込みの場合、次の行のscriptタグも含めて処理
         i++;
-        while (
-          i < lines.length &&
-          !new RegExp(`<\\/${tagName}\\s*>`, "i").test(lines[i])
-        ) {
+        while (i < lines.length && lines[i].trim().startsWith("<script")) {
           rawHtml += `\n${lines[i]}`;
           i++;
         }
-        // 最後の行（閉じタグを含む行）が存在すれば追加
-        if (i < lines.length) {
-          rawHtml += `\n${lines[i]}`;
+        console.log("Twitter embed rawHtml:", rawHtml.substring(0, 200) + "...");
+        console.log("Twitter embed processing complete, current line:", i);
+
+        // Twitter埋め込みの場合は特別に処理をスキップ
+        if (rawHtml && rawHtml.trim() !== "") {
+          console.log("Creating Twitter embed block with rawHtml:", rawHtml.length, "characters");
+
+          // Twitter埋め込みのprovider情報を抽出（srcRawは不要）
+          let provider: Provider;
+          try {
+            provider = extractProviderFromRawHtml(rawHtml, undefined);
+          } catch (_e) {
+            console.error("Failed to extract provider from Twitter embed:", _e);
+          }
+
+          console.log("Twitter embed provider:", provider);
+
+          blocks[blockId] = {
+            id: blockId,
+            type: "Embed",
+            meta: { order, depth: 0 },
+            value: [
+              {
+                id: textId,
+                type: "embed",
+                children: [{ text: "" }],
+                props: Object.assign({}, provider ? { provider } : {}, { rawHtml }),
+              },
+            ],
+          };
+          order++;
+          console.log("Twitter embed block created successfully");
+        } else {
+          console.log("Skipping empty Twitter embed");
         }
+        // iは既に適切に進められているので、continueのみ
+        continue;
+      } else {
+        // 通常のHTMLタグの処理
+        // self-closing または 同一行に閉じタグがある場合はそのまま扱う
+        const hasClosingOnSameLine = tagName
+          ? new RegExp(`<\\/${tagName}\\s*>`, "i").test(trimmed)
+          : false;
+        const isSelfClosing = /<[^>]+\/>\s*$/.test(trimmed);
+
+        if (!hasClosingOnSameLine && !isSelfClosing && tagName) {
+          // 複数行に渡る可能性があるため閉じタグが見つかるまで集める
+          i++;
+          while (
+            i < lines.length &&
+            !new RegExp(`<\\/${tagName}\\s*>`, "i").test(lines[i])
+          ) {
+            rawHtml += `\n${lines[i]}`;
+            i++;
+          }
+          // 最後の行（閉じタグを含む行）が存在すれば追加
+          if (i < lines.length) {
+            rawHtml += `\n${lines[i]}`;
+          }
+        }
+
+        console.log("HTML embed processing complete, current line:", i);
       }
 
       // 変換や補完は行わず、生のHTML（rawHtml）のみを保存する
@@ -978,37 +1063,25 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
         // noop
       }
 
-      blocks[blockId] = {
-        id: blockId,
-        type: "Embed",
-        meta: { order, depth: 0 },
-        value: [
-          {
-            id: textId,
-            type: "embed",
-            children: [{ text: "" }],
-            props: Object.assign({}, provider ? { provider } : {}, { rawHtml }),
-          },
-        ],
-      };
-      order++;
-      i++;
-      continue;
-    }
+      console.log("Creating embed block:", blockId, "with rawHtml length:", rawHtml.length);
+      console.log("Embed block rawHtml preview:", rawHtml.substring(0, 100) + "...");
+      console.log("Processing order:", order);
 
-    if (line.startsWith("[Embed](")) {
-      const match = line.match(/\[Embed\]\(([^)]+)\)/);
-      if (match) {
-        const urlText = match[1];
-        let provider: Provider;
-        try {
-          provider = extractProviderFromRawHtml(urlText, undefined);
-        } catch (_e) {
-          // noop
-        }
+      // 埋め込みコンテンツの種類を特定
+      if (rawHtml.includes("youtube.com") || rawHtml.includes("youtu.be")) {
+        console.log("Loading YouTube embed");
+      } else if (rawHtml.includes("discord.com")) {
+        console.log("Loading Discord embed");
+      } else if (rawHtml.includes("google.com") && rawHtml.includes("maps")) {
+        console.log("Loading Google Maps embed");
+      } else if (rawHtml.includes("twitter-tweet")) {
+        console.log("Loading Twitter embed");
+      } else {
+        console.log("Loading unknown embed type");
+      }
 
-        // 変換や補完は行わず、元のMarkdown行を rawHtml として保持するが
-        // provider 情報が取れれば最小限付与する
+      // 空の埋め込みブロックは作成しない
+      if (rawHtml && rawHtml.trim() !== "") {
         blocks[blockId] = {
           id: blockId,
           type: "Embed",
@@ -1018,12 +1091,84 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
               id: textId,
               type: "embed",
               children: [{ text: "" }],
-              props: Object.assign({}, provider ? { provider } : {}, {
-                rawHtml: line,
-              }),
+              props: Object.assign({}, provider ? { provider } : {}, { rawHtml }),
             },
           ],
         };
+        order++;
+        console.log("Embed block created successfully");
+      } else {
+        console.log("Skipping empty embed block");
+      }
+      i++;
+      continue;
+    }
+
+    if (line.startsWith("[Embed](")) {
+      const match = line.match(/\[Embed\]\(([^)]*)\)/);
+      if (match) {
+        const urlText = match[1];
+
+        // URLが空の場合は空の埋め込みとして処理
+        if (!urlText || urlText.trim() === "") {
+          blocks[blockId] = {
+            id: blockId,
+            type: "Embed",
+            meta: { order, depth: 0 },
+            value: [
+              {
+                id: textId,
+                type: "embed",
+                children: [{ text: "" }],
+                props: { rawHtml: "" },
+              },
+            ],
+          };
+          order++;
+          i++;
+          continue;
+        }
+
+        let provider: Provider;
+        try {
+          provider = extractProviderFromRawHtml(urlText, undefined);
+        } catch (_e) {
+          // noop
+        }
+
+        // URLが生のHTMLタグの場合はそのままrawHtmlとして保存
+        if (urlText.trim().startsWith("<")) {
+          blocks[blockId] = {
+            id: blockId,
+            type: "Embed",
+            meta: { order, depth: 0 },
+            value: [
+              {
+                id: textId,
+                type: "embed",
+                children: [{ text: "" }],
+                props: { rawHtml: urlText },
+              },
+            ],
+          };
+        } else {
+          // 通常のURLの場合は元のMarkdown行をrawHtmlとして保持
+          blocks[blockId] = {
+            id: blockId,
+            type: "Embed",
+            meta: { order, depth: 0 },
+            value: [
+              {
+                id: textId,
+                type: "embed",
+                children: [{ text: "" }],
+                props: Object.assign({}, provider ? { provider } : {}, {
+                  rawHtml: line,
+                }),
+              },
+            ],
+          };
+        }
         order++;
         i++;
         continue;
@@ -1060,6 +1205,19 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
  */
 function extractProviderFromRawHtml(rawHtml?: string, srcRaw?: string) {
   const html = rawHtml || "";
+
+  // Twitter埋め込みの場合は、src属性の抽出をスキップ
+  if (html.includes("twitter-tweet") && html.includes("blockquote")) {
+    // Twitter埋め込みの検出部分に直接進む
+    const tw = html.match(
+      /https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[\w-]+\/status\/(\d+)/i
+    );
+    if (tw) {
+      const full = tw[0];
+      return { type: "twitter", id: tw[1], url: full };
+    }
+  }
+
   // prefer explicit src if provided
   let src = srcRaw;
   if (!src) {
@@ -1112,6 +1270,44 @@ function extractProviderFromRawHtml(rawHtml?: string, srcRaw?: string) {
   if (tw) {
     const full = tw[0];
     return { type: "twitter", id: tw[1], url: full };
+  }
+
+  // Twitter/X埋め込みのblockquote検出
+  if (html.includes("twitter-tweet") && html.includes("blockquote")) {
+    // デバッグ用：実際のHTMLを確認
+    console.log("Twitter embed HTML for debugging:", html.substring(0, 500));
+
+    // より広範囲な検索を試す
+    const urlMatch = html.match(/https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[\w-]+\/status\/(\d+)/i);
+    if (urlMatch) {
+      console.log("Found Twitter URL match:", urlMatch[0], "ID:", urlMatch[1]);
+      return { type: "twitter", id: urlMatch[1], url: urlMatch[0] };
+    }
+    // より単純なstatus検索（URLエンコードを考慮）
+    const statusMatch = html.match(/status\/(\d+)/);
+    if (statusMatch) {
+      console.log("Found Twitter status match:", statusMatch[0], "ID:", statusMatch[1]);
+      return { type: "twitter", id: statusMatch[1], url: `https://twitter.com/status/${statusMatch[1]}` };
+    }
+    // より厳密な検索
+    const strictMatch = html.match(/https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^\/]+\/status\/(\d+)/i);
+    if (strictMatch) {
+      console.log("Found Twitter strict match:", strictMatch[0], "ID:", strictMatch[1]);
+      return { type: "twitter", id: strictMatch[1], url: strictMatch[0] };
+    }
+    // より具体的な検索：href属性内のstatusを探す
+    const hrefMatch = html.match(/href="[^"]*status\/(\d+)[^"]*"/i);
+    if (hrefMatch) {
+      console.log("Found Twitter href match:", hrefMatch[0], "ID:", hrefMatch[1]);
+      return { type: "twitter", id: hrefMatch[1], url: `https://twitter.com/status/${hrefMatch[1]}` };
+    }
+    // より具体的な検索：href属性内のstatusを探す（URLエンコードを考慮）
+    const hrefMatch2 = html.match(/href="[^"]*status%2F(\d+)[^"]*"/i);
+    if (hrefMatch2) {
+      console.log("Found Twitter href match (encoded):", hrefMatch2[0], "ID:", hrefMatch2[1]);
+      return { type: "twitter", id: hrefMatch2[1], url: `https://twitter.com/status/${hrefMatch2[1]}` };
+    }
+    console.log("No Twitter status ID found in HTML");
   }
 
   return undefined;

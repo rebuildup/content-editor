@@ -771,7 +771,41 @@ export default function Home() {
                 marks={MARKS}
                 value={value}
                 onChange={(newValue) => {
-                  setValue(newValue);
+                  // 埋め込みブロックのprovider.urlをrawHtmlにコピー
+                  const updatedValue = { ...newValue };
+                  Object.keys(updatedValue).forEach((blockId) => {
+                    const block = updatedValue[blockId];
+                    if (block.type === "Embed" && block.value?.[0]) {
+                      const node = block.value[0] as any;
+                      if (node.props) {
+                        const props = node.props;
+                        const providerUrl = props.provider?.url;
+                        
+                        // provider.urlがHTMLタグで、rawHtmlが空の場合
+                        if (
+                          providerUrl &&
+                          typeof providerUrl === "string" &&
+                          providerUrl.trim().startsWith("<") &&
+                          (!props.rawHtml || props.rawHtml.trim() === "")
+                        ) {
+                          // 新しいブロックを作成してprovider.urlをrawHtmlにコピー
+                          updatedValue[blockId] = {
+                            ...block,
+                            value: [
+                              {
+                                ...node,
+                                props: {
+                                  ...props,
+                                  rawHtml: providerUrl,
+                                },
+                              },
+                            ],
+                          };
+                        }
+                      }
+                    }
+                  });
+                  setValue(updatedValue);
                 }}
                 placeholder="ここに本文を入力するか、/ でコマンドメニューを開いてください…"
                 style={{
