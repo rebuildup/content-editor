@@ -20,9 +20,8 @@ body {
 body {
   color: var(--foreground);
   background: transparent;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -40,9 +39,8 @@ a {
 
 /* Yoopta Editor Dark Theme */
 [data-yoopta-editor-id] {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
   font-size: 16px;
   line-height: 1.6;
   color: var(--editor-text);
@@ -52,13 +50,13 @@ a {
 
 /* Yoopta Editor Controls - Minimal Override */
 .yoopta-editor .yoopta-block-actions-plus {
-  background: #333333 !important;
-  color: #ffffff !important;
+  background: #333333;
+  color: #ffffff;
 }
 
 .yoopta-editor .yoopta-block-actions-drag {
-  background: #333333 !important;
-  color: #ffffff !important;
+  background: #333333;
+  color: #ffffff;
 }
 
 [data-yoopta-editor-id] > * {

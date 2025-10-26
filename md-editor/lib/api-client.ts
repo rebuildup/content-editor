@@ -17,8 +17,15 @@ console.log("EDITOR_HOME_URL:", EDITOR_HOME_URL);
 export async function fetchContentList(): Promise<ContentIndexItem[]> {
   try {
     console.log(`Fetching content list from: ${EDITOR_HOME_URL}/api/contents`);
-    const response = await fetch(`${EDITOR_HOME_URL}/api/contents`);
+    const response = await fetch(`${EDITOR_HOME_URL}/api/contents`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
     console.log("Response status:", response.status);
+    console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error("API Error:", errorText);
@@ -31,6 +38,9 @@ export async function fetchContentList(): Promise<ContentIndexItem[]> {
     return data;
   } catch (error) {
     console.error("fetchContentList error:", error);
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      throw new Error(`ネットワークエラー: editor-home (${EDITOR_HOME_URL}) に接続できません`);
+    }
     throw error;
   }
 }

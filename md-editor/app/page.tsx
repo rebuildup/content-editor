@@ -151,13 +151,15 @@ export default function Home() {
   const loadContents = useCallback(async () => {
     try {
       setContentsLoading(true);
+      console.log("Fetching content list...");
       const data = await fetchContentList();
+      console.log("Content list fetched:", data);
       setContents(data);
     } catch (error) {
       console.error("Failed to load contents:", error);
       setMessage({
         type: "error",
-        text: "コンテンツ一覧の取得に失敗しました",
+        text: `コンテンツ一覧の取得に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`,
       });
     } finally {
       setContentsLoading(false);
@@ -165,6 +167,10 @@ export default function Home() {
   }, []);
 
   const loadArticles = useCallback(async (contentId: string) => {
+    if (!contentId) {
+      setArticles([]);
+      return;
+    }
     try {
       setArticlesLoading(true);
       const pages = await fetchMarkdownPages(contentId);
@@ -210,17 +216,24 @@ export default function Home() {
   }, [loadContents]);
 
   const getEditorContent = useCallback((): string => {
-    // エディターから直接値を取得
-    const editorValue = editor.getEditorValue();
-    
-    // エディターの値が空の場合は、value状態を使用
-    const contentValue = (editorValue && Object.keys(editorValue).length > 0) ? editorValue : value;
-    
-    if (!contentValue || Object.keys(contentValue).length === 0) {
+    try {
+      // エディターから直接値を取得
+      const editorValue = editor.getEditorValue();
+
+      // エディターの値が空の場合は、value状態を使用
+      const contentValue =
+        editorValue && Object.keys(editorValue).length > 0 ? editorValue : value;
+
+      if (!contentValue || Object.keys(contentValue).length === 0) {
+        return "";
+      }
+      const markdown = convertYooptaToMarkdown(contentValue);
+      return markdown;
+    } catch (error) {
+      console.error("Error in getEditorContent:", error);
+      // エラーが発生した場合は空文字列を返す
       return "";
     }
-    const markdown = convertYooptaToMarkdown(contentValue);
-    return markdown;
   }, [editor, value]);
 
   useEffect(() => {
@@ -238,15 +251,17 @@ export default function Home() {
   }, [currentPage, originalContent, getEditorContent]);
 
   useEffect(() => {
+    console.log("selectedContentId changed:", selectedContentId);
     if (selectedContentId) {
+      console.log("Loading articles and media for:", selectedContentId);
       loadArticles(selectedContentId);
       loadMedia(selectedContentId);
     } else {
+      console.log("Clearing articles and media");
       setArticles([]);
       setMediaList([]);
     }
   }, [selectedContentId, loadArticles, loadMedia]);
-
 
   const resetEditor = useCallback(() => {
     // エディターの値を直接リセット
@@ -257,33 +272,46 @@ export default function Home() {
   }, [editor]);
 
   const handleContentSelect = async (contentId: string) => {
-    setSelectedContentId(contentId);
-    setCurrentPage(null);
-    resetEditor();
-    setMessage(null);
+    try {
+      setSelectedContentId(contentId);
+      setCurrentPage(null);
+      resetEditor();
+      setMessage(null);
+    } catch (error) {
+      console.error("Error in handleContentSelect:", error);
+      setMessage({
+        type: "error",
+        text: "コンテンツの選択中にエラーが発生しました",
+      });
+    }
   };
 
   const focusArticle = useCallback(
     (article: MarkdownPage | null) => {
-      setCurrentPage(article);
-      if (!article) {
-        resetEditor();
-        return;
-      }
+      try {
+        setCurrentPage(article);
+        if (!article) {
+          resetEditor();
+          return;
+        }
 
-      if (article.body?.trim()) {
-        try {
-          const yooptaValue = convertMarkdownToYoopta(article.body);
-          // エディターの値を直接設定
-          editor.setEditorValue(yooptaValue);
-          setValue(yooptaValue);
-          setOriginalContent(article.body);
-          setHasChanges(false);
-        } catch (error) {
-          console.error("Failed to parse markdown:", error);
+        if (article.body?.trim()) {
+          try {
+            const yooptaValue = convertMarkdownToYoopta(article.body);
+            // エディターの値を直接設定
+            editor.setEditorValue(yooptaValue);
+            setValue(yooptaValue);
+            setOriginalContent(article.body);
+            setHasChanges(false);
+          } catch (error) {
+            console.error("Failed to parse markdown:", error);
+            resetEditor();
+          }
+        } else {
           resetEditor();
         }
-      } else {
+      } catch (error) {
+        console.error("Error in focusArticle:", error);
         resetEditor();
       }
     },
