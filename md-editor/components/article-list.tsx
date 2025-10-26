@@ -73,6 +73,8 @@ export function ArticleList({
         style={{
           maxHeight: "320px",
           overflowY: "auto",
+          scrollbarWidth: "thin",
+          scrollbarColor: "#888888 #333333",
         }}
       >
         {isLoading ? (

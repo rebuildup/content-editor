@@ -21,8 +21,8 @@ export function ContentSelector({
       setLoading(true);
       console.log("Loading contents from API...");
 
-      // 直接fetchを使用してAPIをテスト
-      const response = await fetch("http://localhost:3000/api/contents");
+      // editor-homeのAPIを使用
+      const response = await fetch("http://localhost:3020/api/contents");
       console.log("Direct fetch response:", response);
 
       if (!response.ok) {

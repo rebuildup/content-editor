@@ -48,7 +48,17 @@ a {
   color: var(--editor-text);
   max-width: 100%;
   width: 100%;
-  background: transparent;
+}
+
+/* Yoopta Editor Controls - Minimal Override */
+.yoopta-editor .yoopta-block-actions-plus {
+  background: #333333 !important;
+  color: #ffffff !important;
+}
+
+.yoopta-editor .yoopta-block-actions-drag {
+  background: #333333 !important;
+  color: #ffffff !important;
 }
 
 [data-yoopta-editor-id] > * {

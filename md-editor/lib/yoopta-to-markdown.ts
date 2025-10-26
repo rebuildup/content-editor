@@ -4,6 +4,38 @@
 
 import type { YooptaContentValue } from "@yoopta/editor";
 
+// テーブルデータの型定義
+interface TableDataCell {
+  id: string;
+  type: string;
+  children: Array<{
+    id: string;
+    type: string;
+    children: Array<{
+      text: string;
+      bold?: boolean;
+      italic?: boolean;
+      code?: boolean;
+      strike?: boolean;
+    }>;
+  }>;
+}
+
+interface TableRow {
+  id: string;
+  type: string;
+  children: TableDataCell[];
+}
+
+interface TableBlock {
+  id: string;
+  type: string;
+  children: TableRow[];
+}
+
+// 汎用的なテーブル要素の型
+type TableElement = TableRow | TableBlock | TableDataCell;
+
 export function convertYooptaToMarkdown(value: YooptaContentValue): string {
   const blocks = Object.values(value).sort(
     (a, b) => a.meta.order - b.meta.order,
@@ -29,7 +61,7 @@ export function convertYooptaToMarkdown(value: YooptaContentValue): string {
         lines.push(`### ${extractText(content)}`);
         break;
 
-      case "Paragraph":
+      case "Paragraph": {
         const paragraphText = extractText(content);
         if (paragraphText.trim() === "") {
           // 空の段落は空白行として追加（連続する空行も個別に保持）
@@ -38,6 +70,7 @@ export function convertYooptaToMarkdown(value: YooptaContentValue): string {
           lines.push(paragraphText);
         }
         break;
+      }
 
       case "Blockquote":
         lines.push(`> ${extractText(content)}`);
@@ -117,30 +150,93 @@ export function convertYooptaToMarkdown(value: YooptaContentValue): string {
 
       case "Table":
         {
-          // テーブルの簡易変換（エラーを避けるため）
+          // テーブルをテキスト形式で保存
           if (content && content.length > 0) {
             const tableData = content as any[];
-            if (tableData.length > 0) {
-              // ヘッダー行
-              const headerRow = tableData[0];
-              if (headerRow && headerRow.children) {
-                const headerCells = headerRow.children.map((cell: any) =>
-                  extractText(cell.children || [])
-                );
-                lines.push(`| ${headerCells.join(' | ')} |`);
-                lines.push(`| ${headerCells.map(() => '---').join(' | ')} |`);
 
-                // データ行（最大5行まで）
-                for (let i = 1; i < Math.min(tableData.length, 6); i++) {
-                  const row = tableData[i];
-                  if (row && row.children) {
-                    const rowCells = row.children.map((cell: any) =>
-                      extractText(cell.children || [])
-                    );
-                    lines.push(`| ${rowCells.join(' | ')} |`);
+            if (tableData.length > 0) {
+              // テーブル開始マーカー
+              lines.push("<table>");
+              // テーブルデータの構造を正しく解析
+              // tableDataは配列で、各要素が行（table-row）またはテーブルブロック（table）
+              for (let i = 0; i < tableData.length; i++) {
+                const item = tableData[i];
+
+                // アイテムがテーブルブロック（type: 'table'）の場合
+                if (item.type === 'table' && item.children) {
+                  // テーブルブロック内の各行を処理
+                  for (let rowIndex = 0; rowIndex < item.children.length; rowIndex++) {
+                    const row = item.children[rowIndex];
+
+                    if (row?.children) {
+                      const rowCells = row.children.map((dataCell: any) => {
+                        // table-data-cellの構造を処理
+                        if (dataCell.children && dataCell.children.length > 0) {
+                          // 新しい構造: childrenは直接テキストオブジェクトの配列
+                          if (dataCell.children[0].text !== undefined) {
+                            // 直接テキストオブジェクトの場合
+                            const cellText = dataCell.children[0].text || "";
+                            return cellText;
+                          } else {
+                            // 従来の構造: table-cellの階層がある場合
+                            const cell = dataCell.children[0]; // table-cell
+                            let cellText = extractText(cell.children || []);
+
+                            // テキストが空の場合は、DOM要素から直接取得を試す
+                            if (!cellText || cellText.trim() === "") {
+                              const domText = extractTextFromDOM((cell as any).id);
+                              if (domText) {
+                                cellText = domText;
+                              }
+                            }
+                            return cellText || "";
+                          }
+                        }
+                        return "";
+                      });
+
+                      // 行をタブ区切りで保存
+                      const rowText = rowCells.join("\t");
+                      lines.push(rowText);
+                    }
                   }
                 }
+                // アイテムが行（type: 'table-row'）の場合
+                else if (item.type === 'table-row' && item.children) {
+                  const rowCells = item.children.map((dataCell: any) => {
+                    // table-data-cellの構造を処理
+                    if (dataCell.children && dataCell.children.length > 0) {
+                      // 新しい構造: childrenは直接テキストオブジェクトの配列
+                      if (dataCell.children[0].text !== undefined) {
+                        // 直接テキストオブジェクトの場合
+                        const cellText = dataCell.children[0].text || "";
+                        return cellText;
+                      } else {
+                        // 従来の構造: table-cellの階層がある場合
+                        const cell = dataCell.children[0]; // table-cell
+                        let cellText = extractText(cell.children || []);
+
+                        // テキストが空の場合は、DOM要素から直接取得を試す
+                        if (!cellText || cellText.trim() === "") {
+                          const domText = extractTextFromDOM((cell as any).id);
+                          if (domText) {
+                            cellText = domText;
+                          }
+                        }
+                        return cellText || "";
+                      }
+                    }
+                    return "";
+                  });
+
+                  // 行をタブ区切りで保存
+                  const rowText = rowCells.join("\t");
+                  lines.push(rowText);
+                }
               }
+
+              // テーブル終了マーカー
+              lines.push("</table>");
             }
           }
         }
@@ -198,7 +294,10 @@ function extractText(content: YooptaNode[]): string {
   const texts: string[] = [];
 
   for (const item of content) {
-    if (item.children) {
+    // 直接textプロパティがある場合
+    if (item.text) {
+      texts.push(item.text);
+    } else if (item.children) {
       for (const child of item.children) {
         if (typeof child === "string") {
           texts.push(child);
@@ -231,80 +330,116 @@ function extractText(content: YooptaNode[]): string {
           }
 
           texts.push(text);
+        } else if (
+          typeof child === "object" &&
+          child !== null &&
+          "children" in child
+        ) {
+          // ネストした構造を再帰的に処理
+          const nestedText = extractText([child as YooptaNode]);
+          if (nestedText) {
+            texts.push(nestedText);
+          }
         }
       }
-    } else if (item.text) {
-      texts.push(item.text);
     }
   }
 
   return texts.join("");
 }
 
+// DOM要素から直接テキストを取得する関数
+function extractTextFromDOM(elementId: string): string {
+  if (typeof window === 'undefined') return "";
+
+  const element = document.querySelector(`[data-element-id="${elementId}"]`);
+  if (element && element.textContent && element.textContent.trim()) {
+    return element.textContent.trim();
+  }
+
+  return "";
+}
+
 /**
  * Markdownの書式を解析してYooptaノードに変換
  */
-function parseMarkdownFormats(text: string): any[] {
+interface TextNode {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  code?: boolean;
+  strike?: boolean;
+}
+
+function parseMarkdownFormats(text: string): TextNode[] {
   if (!text) return [{ text: "" }];
 
-  const nodes: any[] = [];
+  const nodes: TextNode[] = [];
   let currentIndex = 0;
 
   // 太字の処理
   const boldRegex = /\*\*(.*?)\*\*/g;
-  let match;
+  let match: RegExpExecArray | null;
   const boldMatches: { start: number; end: number; text: string }[] = [];
 
-  while ((match = boldRegex.exec(text)) !== null) {
+  match = boldRegex.exec(text);
+  while (match !== null) {
     boldMatches.push({
       start: match.index,
       end: match.index + match[0].length,
       text: match[1],
     });
+    match = boldRegex.exec(text);
   }
 
   // 斜体の処理
   const italicRegex = /\*(.*?)\*/g;
   const italicMatches: { start: number; end: number; text: string }[] = [];
 
-  while ((match = italicRegex.exec(text)) !== null) {
+  match = italicRegex.exec(text);
+  while (match !== null) {
     italicMatches.push({
       start: match.index,
       end: match.index + match[0].length,
       text: match[1],
     });
+    match = italicRegex.exec(text);
   }
 
   // コードの処理
   const codeRegex = /`(.*?)`/g;
   const codeMatches: { start: number; end: number; text: string }[] = [];
 
-  while ((match = codeRegex.exec(text)) !== null) {
+  match = codeRegex.exec(text);
+  while (match !== null) {
     codeMatches.push({
       start: match.index,
       end: match.index + match[0].length,
       text: match[1],
     });
+    match = codeRegex.exec(text);
   }
 
   // 取り消し線の処理
   const strikeRegex = /~~(.*?)~~/g;
   const strikeMatches: { start: number; end: number; text: string }[] = [];
 
-  while ((match = strikeRegex.exec(text)) !== null) {
+  match = strikeRegex.exec(text);
+  while (match !== null) {
     strikeMatches.push({
       start: match.index,
       end: match.index + match[0].length,
       text: match[1],
     });
+    match = strikeRegex.exec(text);
   }
 
   // すべてのマッチを統合してソート
   const allMatches = [
-    ...boldMatches.map(m => ({ ...m, type: 'bold' })),
-    ...italicMatches.map(m => ({ ...m, type: 'italic' })),
-    ...codeMatches.map(m => ({ ...m, type: 'code' })),
-    ...strikeMatches.map(m => ({ ...m, type: 'strike' })),
+    ...boldMatches.map((m) => ({ ...m, type: "bold" })),
+    ...italicMatches.map((m) => ({ ...m, type: "italic" })),
+    ...codeMatches.map((m) => ({ ...m, type: "code" })),
+    ...strikeMatches.map((m) => ({ ...m, type: "strike" })),
   ].sort((a, b) => a.start - b.start);
 
   // テキストを分割してノードを作成
@@ -320,11 +455,11 @@ function parseMarkdownFormats(text: string): any[] {
     }
 
     // マッチしたテキスト
-    const node: any = { text: match.text };
-    if (match.type === 'bold') node.bold = true;
-    if (match.type === 'italic') node.italic = true;
-    if (match.type === 'code') node.code = true;
-    if (match.type === 'strike') node.strike = true;
+    const node: TextNode = { text: match.text };
+    if (match.type === "bold") node.bold = true;
+    if (match.type === "italic") node.italic = true;
+    if (match.type === "code") node.code = true;
+    if (match.type === "strike") node.strike = true;
 
     nodes.push(node);
     currentIndex = match.end;
@@ -563,7 +698,7 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
       let codeContent = "";
       i++;
       while (i < lines.length && !lines[i].startsWith("```")) {
-        codeContent += lines[i] + "\n";
+        codeContent += `${lines[i]}\n`;
         i++;
       }
       blocks[blockId] = {
@@ -584,33 +719,70 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
       continue;
     }
 
-    // テーブル（簡易版）
-    if (line.includes("|")) {
+    // テーブル（新しいテキスト形式）
+    if (line === "<table>") {
       const tableRows = [];
-      while (i < lines.length && lines[i].includes("|")) {
-        const row = lines[i].split("|").map(cell => cell.trim()).filter(cell => cell);
-        tableRows.push(row);
+      i++; // 次の行に移動
+
+      // テーブル行を収集（</table>で終わるまで）
+      while (i < lines.length && lines[i] !== "</table>") {
+        const currentLine = lines[i];
+        if (currentLine.trim()) {
+          // タブ区切りでセルを分割
+          const row = currentLine.split("\t");
+          tableRows.push(row);
+        }
+        i++;
+      }
+
+      // </table>タグをスキップ
+      if (i < lines.length && lines[i] === "</table>") {
         i++;
       }
 
       if (tableRows.length > 0) {
-        // テーブルを簡易的な段落として扱う（エラーを避けるため）
-        const tableText = tableRows.map(row => row.join(" | ")).join("\n");
-        const parsedText = parseMarkdownFormats(tableText);
+        // テーブルブロックとして復元
+        const tableData = [];
+
+        // 各行を処理
+        for (let rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
+          const row = tableRows[rowIndex];
+
+          const rowCells = row.map((cell, cellIndex) => {
+            const cellContent = cell.trim();
+            const parsedContent = parseMarkdownFormats(cellContent);
+
+            const cellData = {
+              id: `data-cell-${timestamp}-${order}-${rowIndex}-${cellIndex}`,
+              type: "table-data-cell",
+              children: [
+                {
+                  id: `cell-${timestamp}-${order}-${rowIndex}-${cellIndex}`,
+                  type: "table-cell",
+                  children: parsedContent.length > 0 ? parsedContent : [{ text: "" }],
+                },
+              ],
+            };
+
+            return cellData;
+          });
+
+          const rowData = {
+            id: `row-${timestamp}-${order}-${rowIndex}`,
+            type: "table-row",
+            children: rowCells,
+          };
+
+          tableData.push(rowData);
+        }
+
         blocks[blockId] = {
           id: blockId,
-          type: "Paragraph",
+          type: "Table",
           meta: { order, depth: 0 },
-          value: [
-            {
-              id: textId,
-              type: "paragraph",
-              children: parsedText,
-            },
-          ],
+          value: tableData as any,
         };
         order++;
-        i++;
         continue;
       }
     }
@@ -620,7 +792,7 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
       let accordionContent = "";
       i++;
       while (i < lines.length && !lines[i].startsWith("</details>")) {
-        accordionContent += lines[i] + "\n";
+        accordionContent += `${lines[i]}\n`;
         i++;
       }
       const parsedText = parseMarkdownFormats(accordionContent.trim());
@@ -631,7 +803,7 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
         value: [
           {
             id: textId,
-            type: "accordion",
+            type: "accordion-list-item-content",
             children: parsedText,
           },
         ],
@@ -642,7 +814,11 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
     }
 
     // コールアウト
-    if (line.startsWith("> **Note:**") || line.startsWith("> **Warning:**") || line.startsWith("> **Info:**")) {
+    if (
+      line.startsWith("> **Note:**") ||
+      line.startsWith("> **Warning:**") ||
+      line.startsWith("> **Info:**")
+    ) {
       const parsedText = parseMarkdownFormats(line.substring(2));
       blocks[blockId] = {
         id: blockId,
