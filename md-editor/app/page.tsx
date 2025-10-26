@@ -27,6 +27,7 @@ import {
 import Paragraph from "@yoopta/paragraph";
 import Table from "@yoopta/table";
 import Toolbar, { DefaultToolbarRender } from "@yoopta/toolbar";
+import Video from "@yoopta/video";
 import {
   type ReactNode,
   useCallback,
@@ -36,7 +37,6 @@ import {
 } from "react";
 import { ArticleList } from "@/components/article-list";
 import { createCustomImagePlugin } from "@/components/custom-image-plugin";
-import { createCustomVideoPlugin } from "@/components/custom-video-plugin";
 import {
   createMarkdownPage,
   deleteMarkdownPage,
@@ -144,7 +144,7 @@ export default function Home() {
       Accordion,
       Embed,
       createCustomImagePlugin(pluginContentId),
-      createCustomVideoPlugin(pluginContentId),
+      Video,
     ];
   }, [selectedContentId]);
 

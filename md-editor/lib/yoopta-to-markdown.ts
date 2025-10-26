@@ -167,9 +167,22 @@ export function convertYooptaToMarkdown(value: YooptaContentValue): string {
 
       case "Video":
         {
-          const src =
-            (content[0] as { props?: { src?: string } })?.props?.src || "";
-          lines.push(`[Video](${src})`);
+          const props = (content[0] as {
+            props?: {
+              src?: string;
+              sizes?: { width: number; height: number };
+              settings?: { controls: boolean; loop: boolean; muted: boolean; autoPlay: boolean };
+            }
+          })?.props || {};
+
+          console.log("Converting Video block to Markdown, props:", props);
+
+          const src = props.src || "";
+
+          // シンプルな形式でVideoブロックを保存
+          const markdownLine = `[Video](${src})`;
+          console.log("Video Markdown line:", markdownLine);
+          lines.push(markdownLine);
         }
         break;
 
@@ -917,6 +930,39 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
       const match = line.match(/\[Video\]\(([^)]+)\)/);
       if (match) {
         const [, src] = match;
+        console.log("Video block found, src:", src);
+
+        // YouTube URLの場合はproviderを設定
+        let provider = null;
+        if (src.includes("youtube.com") || src.includes("youtu.be")) {
+          const videoIdMatch = src.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+          if (videoIdMatch) {
+            provider = {
+              type: "youtube",
+              id: videoIdMatch[1],
+              url: src,
+            };
+          }
+        }
+
+        // Videoブロックのプロパティを設定
+        const props = {
+          src: src || "",
+          sizes: {
+            width: 640,
+            height: 360,
+          },
+          settings: {
+            controls: true,
+            loop: false,
+            muted: false,
+            autoPlay: false,
+          },
+          ...(provider && { provider }),
+        };
+
+        console.log("Video props created:", props);
+
         blocks[blockId] = {
           id: blockId,
           type: "Video",
@@ -926,10 +972,11 @@ export function convertMarkdownToYoopta(markdown: string): YooptaContentValue {
               id: textId,
               type: "video",
               children: [{ text: "" }],
-              props: { src },
+              props,
             },
           ],
         };
+        console.log("Video block created:", blocks[blockId]);
         order++;
         i++;
         continue;
