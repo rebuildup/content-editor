@@ -1,5 +1,10 @@
 "use client";
 
+import AudiotrackRoundedIcon from "@mui/icons-material/AudiotrackRounded";
+import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
+import MovieCreationRoundedIcon from "@mui/icons-material/MovieCreationRounded";
 import {
   Alert,
   Box,
@@ -10,11 +15,6 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
-import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
-import MovieCreationRoundedIcon from "@mui/icons-material/MovieCreationRounded";
-import AudiotrackRoundedIcon from "@mui/icons-material/AudiotrackRounded";
-import InsertDriveFileRoundedIcon from "@mui/icons-material/InsertDriveFileRounded";
 import { useCallback, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { deleteMedia, getMediaUrl, uploadMediaFile } from "@/lib/api/media";
@@ -88,9 +88,22 @@ export function MediaManager({
 
   return (
     <Paper elevation={0} sx={{ bgcolor: "background.paper", borderRadius: 0 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 0, py: 1.5 }}>
-        <Typography variant="subtitle1" fontWeight={600}>Media</Typography>
-        <Button size="small" variant="outlined" startIcon={<CloudUploadRoundedIcon />} disabled={!contentId || isUploading} {...getRootProps()}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 0, py: 1.5 }}
+      >
+        <Typography variant="subtitle1" fontWeight={600}>
+          Media
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<CloudUploadRoundedIcon />}
+          disabled={!contentId || isUploading}
+          {...getRootProps()}
+        >
           <input {...getInputProps()} />
           {isUploading ? "Uploading..." : "Add file"}
         </Button>
@@ -102,7 +115,15 @@ export function MediaManager({
           </Alert>
         ) : (
           <>
-            <Box {...getRootProps()} sx={{ p: 2, textAlign: "center", color: "text.secondary", cursor: !contentId || isUploading ? "not-allowed" : "pointer" }}>
+            <Box
+              {...getRootProps()}
+              sx={{
+                p: 2,
+                textAlign: "center",
+                color: "text.secondary",
+                cursor: !contentId || isUploading ? "not-allowed" : "pointer",
+              }}
+            >
               <input {...getInputProps()} />
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 Drop files here or use the button above to upload.
@@ -132,7 +153,14 @@ export function MediaManager({
                       item={item}
                       contentId={item.contentId ?? contentId}
                     />
-                    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25, flex: 1 }}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.25,
+                        flex: 1,
+                      }}
+                    >
                       <Typography variant="subtitle2" fontWeight={600}>
                         {item.filename}
                       </Typography>

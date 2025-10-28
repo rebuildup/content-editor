@@ -76,6 +76,7 @@ export function WebBookmarkBlock({
         </Stack>
       </CardContent>
       <CardActionArea
+        component="a"
         disabled={!url}
         href={url || undefined}
         target="_blank"

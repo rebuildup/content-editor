@@ -69,9 +69,23 @@ export function ContentSelector({
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 0, py: 1.5 }}>
-        <Typography variant="subtitle1" fontWeight={600}>Content</Typography>
-        <Button size="small" variant="text" onClick={() => void loadContents()} disabled={loading}>Refresh</Button>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 0, py: 1.5 }}
+      >
+        <Typography variant="subtitle1" fontWeight={600}>
+          Content
+        </Typography>
+        <Button
+          size="small"
+          variant="text"
+          onClick={() => void loadContents()}
+          disabled={loading}
+        >
+          Refresh
+        </Button>
       </Stack>
       <Box sx={{ px: 0, py: 0 }}>
         {loading && (

@@ -10,7 +10,12 @@ export interface EditorLayoutProps {
   rightPanel?: ReactNode;
 }
 
-export function EditorLayout({ sidebar, editor, toolbar, rightPanel }: EditorLayoutProps) {
+export function EditorLayout({
+  sidebar,
+  editor,
+  toolbar,
+  rightPanel,
+}: EditorLayoutProps) {
   return (
     <Box
       sx={{

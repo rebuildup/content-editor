@@ -204,9 +204,15 @@ export function BlockEditor({
     <Stack
       spacing={2}
       data-editor-id={editorId}
-      sx={{ position: "relative", maxWidth: 768, mx: "auto", width: "100%", bgcolor: "transparent" }}
+      sx={{
+        position: "relative",
+        maxWidth: 768,
+        mx: "auto",
+        width: "100%",
+        bgcolor: "transparent",
+      }}
     >
-      {blocks.map((block, index) => {
+      {blocks.map((block) => {
         const Component = BLOCK_COMPONENTS[block.type] ?? UnknownBlock;
         const isActive = block.id === activeId;
 
@@ -240,12 +246,14 @@ export function BlockEditor({
               )}
               <Box sx={{ px: 0.5, py: 0.25 }}>
                 <Component
-                block={block}
-                readOnly={readOnly}
-                onContentChange={(content) => updateContent(block.id, content)}
-                onAttributesChange={(attributes) =>
-                  updateAttributes(block.id, attributes)
-                }
+                  block={block}
+                  readOnly={readOnly}
+                  onContentChange={(content) =>
+                    updateContent(block.id, content)
+                  }
+                  onAttributesChange={(attributes) =>
+                    updateAttributes(block.id, attributes)
+                  }
                 />
               </Box>
             </Stack>

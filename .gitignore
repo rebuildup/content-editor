@@ -12,20 +12,6 @@
 /page-editor/package-lock.json
 /page-editor/yarn.lock
 
-# Database files (開発用のみ除外、本番環境では調整が必要)
-/editor-home/data/*.db
-/editor-home/data/*.db-shm
-/editor-home/data/*.db-wal
-/editor-home/data/contents/*.db
-/editor-home/data/contents/*.db-shm
-/editor-home/data/contents/*.db-wal
-/page-editor/data/*.db
-/page-editor/data/*.db-shm
-/page-editor/data/*.db-wal
-/page-editor/data/contents/*.db
-/page-editor/data/contents/*.db-shm
-/page-editor/data/contents/*.db-wal
-
 # Environment variables
 .env
 .env.local

@@ -1,7 +1,7 @@
 "use client";
 
-import { CacheProvider } from "@emotion/react";
 import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { useServerInsertedHTML } from "next/navigation";
 import { useMemo } from "react";
@@ -37,17 +37,11 @@ export function ThemeRegistry({ children }: ThemeRegistryProps) {
     if (names.length === 0) {
       return null;
     }
-    return (
-      <style
-        data-emotion={`mui ${names.join(" ")}`}
-        dangerouslySetInnerHTML={{
-          __html: names
-            .map((name) => cache.inserted[name])
-            .filter(Boolean)
-            .join(" "),
-        }}
-      />
-    );
+    const cssText = names
+      .map((name) => cache.inserted[name])
+      .filter(Boolean)
+      .join(" ");
+    return <style data-emotion={`mui ${names.join(" ")}`}>{cssText}</style>;
   });
 
   return (

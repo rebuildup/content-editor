@@ -57,7 +57,14 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
           Clear
         </button>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "6px 0" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          padding: "6px 0",
+        }}
+      >
         <input
           placeholder="Search blocks"
           value={query}
@@ -74,20 +81,26 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
         />
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {Object.entries(grouped).map(([group, items]) => (
-            <div key={group} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{
-                fontSize: 11,
-                opacity: 0.65,
-                textTransform: "uppercase",
-                letterSpacing: 1,
-              }}>
+            <div
+              key={group}
+              style={{ display: "flex", flexDirection: "column", gap: 6 }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  opacity: 0.65,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                }}
+              >
                 {translateGroup(group)}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {items.map((item) => (
-                  <div
+                  <button
                     key={item.type}
                     onClick={() => onInsertBlock?.(item.type)}
+                    type="button"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -96,15 +109,14 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
                       borderRadius: 6,
                       cursor: "pointer",
                     }}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        onInsertBlock?.(item.type);
-                      }
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "rgba(255,255,255,0.06)";
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.06)"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background =
+                        "transparent";
+                    }}
                   >
                     <div
                       style={{
@@ -124,17 +136,39 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
                     >
                       {String(item.icon ?? "?")}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                          overflow: "hidden",
+                        }}
+                      >
                         {item.label}
                       </div>
                       {item.description ? (
-                        <div style={{ fontSize: 12, opacity: 0.7, whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            opacity: 0.7,
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            overflow: "hidden",
+                          }}
+                        >
                           {item.description}
                         </div>
                       ) : null}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>

@@ -8,9 +8,11 @@ import StrikethroughSRoundedIcon from "@mui/icons-material/StrikethroughSRounded
 import { Paper, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
 import type { EditorCommand } from "@/types/editor";
 
+type IconElement = React.ReactElement;
+
 const BUTTONS: Array<{
   command: EditorCommand;
-  icon: JSX.Element;
+  icon: IconElement;
   title: string;
 }> = [
   {

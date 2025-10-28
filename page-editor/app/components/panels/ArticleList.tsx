@@ -50,9 +50,18 @@ export function ArticleList({
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 0, py: 1.5 }}>
-        <Typography variant="subtitle1" fontWeight={600}>Pages</Typography>
-        <Button size="small" variant="outlined" onClick={onCreate}>New page</Button>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 0, py: 1.5 }}
+      >
+        <Typography variant="subtitle1" fontWeight={600}>
+          Pages
+        </Typography>
+        <Button size="small" variant="outlined" onClick={onCreate}>
+          New page
+        </Button>
       </Stack>
       <Stack spacing={1.5} sx={{ px: 0, py: 0 }}>
         <TextField
@@ -84,23 +93,38 @@ export function ArticleList({
             {filtered.map((page, index) => {
               const isActive = page.id === selectedId;
               return (
-                <Box key={page.id} sx={{ bgcolor: isActive ? "action.hover" : "transparent" }}>
+                <Box
+                  key={page.id}
+                  sx={{ bgcolor: isActive ? "action.hover" : "transparent" }}
+                >
                   <ListItemButton
                     sx={{ alignItems: "flex-start", gap: 1, px: 1.5, py: 1.25 }}
                     onClick={() => onSelect(page)}
                   >
                     <ListItemText
                       primary={
-                        <Typography variant="body1" fontWeight={600} sx={{ lineHeight: 1.4 }}>
+                        <Typography
+                          variant="body1"
+                          fontWeight={600}
+                          sx={{ lineHeight: 1.4 }}
+                        >
                           {page.frontmatter.title || "Untitled page"}
                         </Typography>
                       }
                       secondary={
                         <Box>
-                          <Typography variant="caption" color="text.secondary" component="div">
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            component="div"
+                          >
                             {page.slug}
                           </Typography>
-                          <Typography variant="caption" color="text.disabled" component="div">
+                          <Typography
+                            variant="caption"
+                            color="text.disabled"
+                            component="div"
+                          >
                             {new Date(page.updatedAt).toLocaleString()}
                           </Typography>
                         </Box>

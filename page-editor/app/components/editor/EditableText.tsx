@@ -43,6 +43,10 @@ export const EditableText = forwardRef<HTMLDivElement, EditableTextProps>(
   ) {
     const internalRef = useRef<HTMLDivElement | null>(null);
     const theme = useTheme();
+    const mergedSx: SxProps<Theme> = [
+      baseStyles(theme),
+      ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
+    ];
 
     useEffect(() => {
       const element =
@@ -81,7 +85,7 @@ export const EditableText = forwardRef<HTMLDivElement, EditableTextProps>(
         aria-multiline="true"
         data-placeholder={placeholder}
         onInput={handleInput}
-        sx={[baseStyles(theme), sx]}
+        sx={mergedSx}
         className={readOnly ? "is-readonly" : undefined}
       />
     );
