@@ -1,16 +1,16 @@
 # Dependencies
 /editor-home/node_modules
-/md-editor/node_modules
+/page-editor/node_modules
 
 # Next.js
 /editor-home/.next
-/md-editor/.next
+/page-editor/.next
 
 # Lock files (pnpm-lock.yaml は残す)
 /editor-home/package-lock.json
 /editor-home/yarn.lock
-/md-editor/package-lock.json
-/md-editor/yarn.lock
+/page-editor/package-lock.json
+/page-editor/yarn.lock
 
 # Database files (開発用のみ除外、本番環境では調整が必要)
 /editor-home/data/*.db
@@ -19,6 +19,12 @@
 /editor-home/data/contents/*.db
 /editor-home/data/contents/*.db-shm
 /editor-home/data/contents/*.db-wal
+/page-editor/data/*.db
+/page-editor/data/*.db-shm
+/page-editor/data/*.db-wal
+/page-editor/data/contents/*.db
+/page-editor/data/contents/*.db-shm
+/page-editor/data/contents/*.db-wal
 
 # Environment variables
 .env

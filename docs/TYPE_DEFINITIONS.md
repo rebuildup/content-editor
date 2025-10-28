@@ -387,6 +387,126 @@ interface DatabaseStats {
 
 ---
 
+## 7. ブロックシステム型 (types/blocks.ts)
+
+### BlockBase
+
+ブロックシステムの基本データ型（Markdown拡張）。
+
+```typescript
+interface BlockBase {
+  id: string; // 自動生成される一意ID
+  type: string; // ブロックタイプ
+  content: string; // ブロックの内容
+  attributes?: Record<string, unknown>; // ブロックの属性
+}
+```
+
+### レイアウトブロック型
+
+```typescript
+// 空行・余白ブロック
+interface SpacerBlock extends BlockBase {
+  type: "spacer";
+  attributes: {
+    height: number; // 高さ（px）
+  };
+}
+```
+
+### メディアブロック型
+
+```typescript
+// 画像ブロック
+interface ImageBlock extends BlockBase {
+  type: "image";
+  attributes: {
+    src: string; // media-id（API経由で取得）
+    alt?: string;
+    width?: number;
+    height?: number;
+  };
+}
+
+// 動画ブロック
+interface VideoBlock extends BlockBase {
+  type: "video";
+  attributes: {
+    src: string; // media-id（API経由で取得）
+    poster?: string; // media-id（API経由で取得）
+    width?: number;
+    height?: number;
+    autoplay?: boolean;
+    controls?: boolean;
+  };
+}
+
+// 音声ブロック
+interface AudioBlock extends BlockBase {
+  type: "audio";
+  attributes: {
+    src: string; // media-id（API経由で取得）
+    controls?: boolean;
+    autoplay?: boolean;
+  };
+}
+```
+
+### 埋め込みブロック型
+
+```typescript
+// カスタムHTMLブロック
+interface CustomBlock extends BlockBase {
+  type: "custom";
+  content: string; // HTML content
+}
+```
+
+### 数式ブロック型
+
+```typescript
+// TeX数式ブロック
+interface MathBlock extends BlockBase {
+  type: "math";
+  content: string; // TeX formula
+}
+```
+
+### ブロックのユニオン型
+
+```typescript
+type Block = SpacerBlock | ImageBlock | VideoBlock | AudioBlock | CustomBlock | MathBlock;
+```
+
+### ブロック変換型
+
+```typescript
+// Markdownからブロックへの変換オプション
+interface MarkdownToBlocksOptions {
+  preserveMarkdown?: boolean; // Markdown記法を保持するか
+  generateIds?: boolean; // IDを自動生成するか
+}
+
+// ブロックからMarkdownへの変換オプション
+interface BlocksToMarkdownOptions {
+  includeAttributes?: boolean; // 属性を含めるか
+  format?: "compact" | "readable"; // フォーマット形式
+}
+
+// 変換関数の型
+type markdownToBlocks = (
+  markdown: string,
+  options?: MarkdownToBlocksOptions
+) => BlockBase[];
+
+type blocksToMarkdown = (
+  blocks: BlockBase[],
+  options?: BlocksToMarkdownOptions
+) => string;
+```
+
+---
+
 ## 使用例
 
 ### コンテンツ作成
