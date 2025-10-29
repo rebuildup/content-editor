@@ -15,12 +15,17 @@ export function useEditorState({
   initialBlocks,
 }: UseEditorStateOptions = {}) {
   const [page, setPage] = useState<MarkdownPage | null>(initialPage ?? null);
-  const [editorId] = useState(() => nanoid(8));
+  const [editorId, setEditorId] = useState<string>("");
   const [blocks, setBlocks] = useState<Block[]>(
     initialBlocks && initialBlocks.length > 0
       ? initialBlocks
       : [createEmptyBlock("paragraph")],
   );
+
+  // Generate editorId only on client side to avoid hydration mismatch
+  useEffect(() => {
+    setEditorId(nanoid(8));
+  }, []);
   const markdown = useMemo(() => convertBlocksToMarkdown(blocks), [blocks]);
   const [hasChanges, setHasChanges] = useState(false);
 

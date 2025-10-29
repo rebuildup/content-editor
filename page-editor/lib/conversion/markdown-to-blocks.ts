@@ -1,6 +1,26 @@
 import { nanoid } from "nanoid";
 import type { Block, BlockType, ListItem } from "@/types/blocks";
 
+const RAW_HTML_TAGS = new Set([
+  "iframe",
+  "marquee",
+  "div",
+  "section",
+  "article",
+  "aside",
+  "figure",
+  "figcaption",
+  "canvas",
+  "svg",
+  "video",
+  "audio",
+  "embed",
+  "object",
+  "blockquote",
+  "style",
+  "script",
+]);
+
 function createBlock(type: BlockType, overrides?: Partial<Block>): Block {
   return {
     id: nanoid(8),
@@ -248,6 +268,35 @@ export function convertMarkdownToBlocks(markdown: string): Block[] {
       continue;
     }
 
+    if (line.startsWith("<Html")) {
+      const inlineMatch = line.match(/^<Html>(.*)<\/Html>$/);
+      if (inlineMatch) {
+        blocks.push(
+          createBlock("html", {
+            content: inlineMatch[1],
+          }),
+        );
+        i++;
+        continue;
+      }
+
+      const htmlLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith("</Html>")) {
+        htmlLines.push(lines[i]);
+        i++;
+      }
+      blocks.push(
+        createBlock("html", {
+          content: htmlLines.join("\n"),
+        }),
+      );
+      if (i < lines.length) {
+        i++; // skip closing </Html>
+      }
+      continue;
+    }
+
     if (line.startsWith("<Spacer")) {
       const attributes = parseAttributes(line);
       blocks.push(
@@ -279,12 +328,40 @@ export function convertMarkdownToBlocks(markdown: string): Block[] {
       paragraphLines.push(lines[i]);
       i++;
     }
-    blocks.push(
-      createBlock("paragraph", {
-        content: paragraphLines.join("\n"),
-      }),
-    );
+    const paragraphText = paragraphLines.join("\n");
+    if (looksLikeRawHtml(paragraphText)) {
+      blocks.push(
+        createBlock("html", {
+          content: paragraphText,
+        }),
+      );
+    } else {
+      blocks.push(
+        createBlock("paragraph", {
+          content: paragraphText,
+        }),
+      );
+    }
   }
 
   return blocks;
+}
+
+function looksLikeRawHtml(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("<") || /^<Html/i.test(trimmed)) {
+    return false;
+  }
+
+  const match = trimmed.match(/^<([a-zA-Z0-9:-]+)\b/);
+  if (!match) {
+    return false;
+  }
+
+  const tag = match[1]?.toLowerCase();
+  if (!tag || !RAW_HTML_TAGS.has(tag)) {
+    return false;
+  }
+
+  return true;
 }

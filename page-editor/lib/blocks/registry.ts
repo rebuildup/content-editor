@@ -104,8 +104,16 @@ const DEFINITIONS: BlockDefinition[] = [
     type: "embed",
     label: "Embed",
     description: "Embed web content, maps, tweets, or custom HTML.",
-    icon: "🌐",
+    icon: "??",
     group: "embed",
+  },
+  {
+    type: "html",
+    label: "Custom HTML",
+    description: "Write raw HTML and preview it instantly.",
+    icon: "</>",
+    group: "advanced",
+    keywords: ["html", "iframe", "embed", "custom"],
   },
   {
     type: "code",

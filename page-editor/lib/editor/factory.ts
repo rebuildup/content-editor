@@ -33,6 +33,9 @@ export function createInitialBlock(type: BlockType): Block {
     case "toggle":
       block.content = "Add more details here";
       break;
+    case "html":
+      block.content = "";
+      break;
     default:
       break;
   }

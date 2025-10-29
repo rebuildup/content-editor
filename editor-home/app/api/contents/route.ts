@@ -48,7 +48,13 @@ export async function GET(req: Request) {
 
     // 全コンテンツの一覧を取得（インデックスから）
     const contents = getAllFromIndex();
-    return Response.json(contents);
+    return Response.json(contents, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    });
   } catch (error) {
     console.error("GET /api/contents error:", error);
     return Response.json(

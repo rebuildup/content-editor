@@ -21,8 +21,8 @@ export function EditorLayout({
       sx={{
         display: "grid",
         gridTemplateColumns: rightPanel
-          ? { xs: "1fr", lg: "360px 1fr 360px" }
-          : { xs: "1fr", lg: "360px 1fr" },
+          ? { xs: "1fr", lg: "300px 1fr 320px" }
+          : { xs: "1fr", lg: "300px 1fr" },
         height: "100vh",
         width: "100vw",
         bgcolor: "transparent",

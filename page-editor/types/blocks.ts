@@ -19,6 +19,7 @@ export type BlockType =
   | "board"
   | "calendar"
   | "embed"
+  | "html"
   | "spacer";
 
 export interface BlockAttributes {

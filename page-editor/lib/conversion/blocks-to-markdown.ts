@@ -158,6 +158,12 @@ export function convertBlocksToMarkdown(blocks: Block[]): string {
         lines.push(`<Embed url="${url}"${provider}>${block.content}</Embed>`);
         break;
       }
+      case "html": {
+        lines.push("<Html>");
+        lines.push(block.content);
+        lines.push("</Html>");
+        break;
+      }
       case "table": {
         lines.push("<Table>");
         lines.push(block.content);

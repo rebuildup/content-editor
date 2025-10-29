@@ -41,6 +41,8 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const url = buildUrl(path, query);
 
+  console.log(`[API] Making request to: ${url}`);
+
   const response = await fetch(url, {
     ...init,
     headers: {
@@ -49,6 +51,8 @@ export async function apiRequest<T>(
     },
   });
 
+  console.log(`[API] Response status: ${response.status}`);
+
   if (!response.ok) {
     let details: unknown;
     try {
@@ -56,6 +60,7 @@ export async function apiRequest<T>(
     } catch {
       details = await response.text();
     }
+    console.error(`[API] Request failed:`, { url, status: response.status, details });
     throw new ApiError(
       `Request to ${url} failed with status ${response.status}`,
       response.status,
@@ -64,8 +69,11 @@ export async function apiRequest<T>(
   }
 
   try {
-    return (await response.json()) as T;
+    const result = await response.json() as T;
+    console.log(`[API] Request successful:`, result);
+    return result;
   } catch (error) {
+    console.error(`[API] JSON parse error:`, error);
     throw new ApiError(
       `Failed to parse JSON response from ${url}`,
       response.status,

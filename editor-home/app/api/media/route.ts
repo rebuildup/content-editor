@@ -32,12 +32,24 @@ export async function GET(req: Request) {
         ...media,
         data: undefined,
         base64,
+      }, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
       });
     }
 
     // メディア一覧を取得（バイナリデータは含めない）
     const mediaList = listMedia(contentId);
-    return Response.json(mediaList);
+    return Response.json(mediaList, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    });
   } catch (error) {
     console.error("GET /api/media error:", error);
     return Response.json({ error: "Failed to fetch media" }, { status: 500 });

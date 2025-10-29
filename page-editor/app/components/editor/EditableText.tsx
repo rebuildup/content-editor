@@ -1,7 +1,12 @@
 "use client";
 
 import { alpha, Box, type SxProps, type Theme, useTheme } from "@mui/material";
-import { forwardRef, useEffect, useRef } from "react";
+import {
+  forwardRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useRef,
+} from "react";
 
 export interface EditableTextProps {
   value: string;
@@ -10,6 +15,7 @@ export interface EditableTextProps {
   sx?: SxProps<Theme>;
   autoFocus?: boolean;
   readOnly?: boolean;
+  onKeyDown?: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
 }
 
 const baseStyles: SxProps<Theme> = (theme) => ({
@@ -38,7 +44,15 @@ const baseStyles: SxProps<Theme> = (theme) => ({
 
 export const EditableText = forwardRef<HTMLDivElement, EditableTextProps>(
   function EditableText(
-    { value, onChange, placeholder, sx, autoFocus = false, readOnly = false },
+    {
+      value,
+      onChange,
+      placeholder,
+      sx,
+      autoFocus = false,
+      readOnly = false,
+      onKeyDown,
+    },
     forwardedRef,
   ) {
     const internalRef = useRef<HTMLDivElement | null>(null);
@@ -73,6 +87,15 @@ export const EditableText = forwardRef<HTMLDivElement, EditableTextProps>(
       onChange(text);
     };
 
+    const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (readOnly) {
+        return;
+      }
+      if (onKeyDown) {
+        onKeyDown(event);
+      }
+    };
+
     return (
       /* biome-ignore lint/a11y/useSemanticElements: contentEditable surface provides block-style editing */
       <Box
@@ -85,6 +108,7 @@ export const EditableText = forwardRef<HTMLDivElement, EditableTextProps>(
         aria-multiline="true"
         data-placeholder={placeholder}
         onInput={handleInput}
+        onKeyDown={handleKeyDown}
         sx={mergedSx}
         className={readOnly ? "is-readonly" : undefined}
       />

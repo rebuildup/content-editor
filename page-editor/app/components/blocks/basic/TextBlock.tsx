@@ -7,12 +7,16 @@ export function TextBlock({
   block,
   readOnly,
   onContentChange,
+  autoFocus,
+  onKeyDown,
 }: BlockComponentProps) {
   return (
     <EditableText
       value={block.content}
       onChange={onContentChange}
       readOnly={readOnly}
+      autoFocus={autoFocus}
+      onKeyDown={onKeyDown}
       placeholder="Write text"
       sx={{
         typography: "body1",

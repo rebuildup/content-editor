@@ -10,6 +10,8 @@ export function HeadingBlock({
   readOnly,
   onContentChange,
   onAttributesChange: _onAttributesChange,
+  autoFocus,
+  onKeyDown,
 }: BlockComponentProps) {
   // 先頭の # の個数から見出しレベルを自動検出（1〜6）。無ければ 2 扱い。
   const level = useMemo(() => {
@@ -35,6 +37,8 @@ export function HeadingBlock({
         value={block.content}
         onChange={onContentChange}
         readOnly={readOnly}
+        autoFocus={autoFocus}
+        onKeyDown={onKeyDown}
         placeholder="Heading"
         sx={(theme) => ({
           typography: variant,

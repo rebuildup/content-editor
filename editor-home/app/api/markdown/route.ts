@@ -144,7 +144,13 @@ export async function GET(req: Request) {
       if (!page) {
         return Response.json({ error: "Page not found" }, { status: 404 });
       }
-      return Response.json(page);
+      return Response.json(page, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+      });
     }
 
     let query = `
@@ -163,7 +169,13 @@ export async function GET(req: Request) {
       .map((row) => mapRowToPage(row))
       .filter((page): page is MarkdownPage => page !== null);
 
-    return Response.json(pages);
+    return Response.json(pages, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    });
   } catch (error) {
     console.error("GET /api/markdown error:", error);
     return Response.json(

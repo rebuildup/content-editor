@@ -70,8 +70,10 @@ export default function PageEditorHome() {
   const loadPages = useCallback(
     async (contentId: string) => {
       try {
+        console.log("[PageEditor] Loading pages for contentId:", contentId);
         setPagesLoading(true);
         const data = await fetchMarkdownPages(contentId);
+        console.log("[PageEditor] Pages loaded:", data);
         setPages(
           data.sort(
             (a, b) =>
@@ -79,8 +81,8 @@ export default function PageEditorHome() {
           ),
         );
       } catch (error) {
-        console.error("Failed to load pages", error);
-        showMessage({ type: "error", text: "Failed to load pages." });
+        console.error("[PageEditor] Failed to load pages", error);
+        showMessage({ type: "error", text: `Failed to load pages: ${error instanceof Error ? error.message : 'Unknown error'}` });
       } finally {
         setPagesLoading(false);
       }
@@ -95,12 +97,14 @@ export default function PageEditorHome() {
         return;
       }
       try {
+        console.log("[PageEditor] Loading media for contentId:", contentId);
         setMediaLoading(true);
         const items = await fetchMediaList(contentId);
+        console.log("[PageEditor] Media loaded:", items);
         setMedia(items);
       } catch (error) {
-        console.error("Failed to load media", error);
-        showMessage({ type: "error", text: "Failed to load media." });
+        console.error("[PageEditor] Failed to load media", error);
+        showMessage({ type: "error", text: `Failed to load media: ${error instanceof Error ? error.message : 'Unknown error'}` });
       } finally {
         setMediaLoading(false);
       }

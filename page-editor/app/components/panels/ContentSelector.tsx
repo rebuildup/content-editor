@@ -42,10 +42,12 @@ export function ContentSelector({
     try {
       setLoading(true);
       setError(null);
+      console.log("[ContentSelector] Loading contents...");
       const data = await fetchContentList();
+      console.log("[ContentSelector] Contents loaded:", data);
       setContents(data);
     } catch (err) {
-      console.error("Failed to load contents", err);
+      console.error("[ContentSelector] Failed to load contents", err);
       setError(err instanceof Error ? err.message : "Failed to load contents");
     } finally {
       setLoading(false);
@@ -105,7 +107,10 @@ export function ContentSelector({
                 labelId="content-selector-label"
                 label="Content"
                 value={selectedContentId ?? ""}
-                onChange={(event) => onSelect(event.target.value)}
+                onChange={(event) => {
+                  console.log("[ContentSelector] Content selected:", event.target.value);
+                  onSelect(event.target.value);
+                }}
                 MenuProps={{
                   PaperProps: {
                     sx: { bgcolor: "background.paper" },

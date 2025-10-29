@@ -36,7 +36,6 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "6px 0",
-          borderBottom: "1px solid rgba(255,255,255,0.12)",
         }}
       >
         <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Blocks</h3>
@@ -49,7 +48,6 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
             padding: "4px 8px",
             background: "transparent",
             color: "inherit",
-            border: "1px solid rgba(255,255,255,0.18)",
             borderRadius: 6,
             cursor: query ? "pointer" : "not-allowed",
           }}
@@ -73,7 +71,6 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
             fontSize: 13,
             padding: "8px 10px",
             borderRadius: 6,
-            border: "1px solid rgba(255,255,255,0.18)",
             background: "transparent",
             color: "inherit",
             outline: "none",
@@ -108,6 +105,9 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
                       padding: "4px 6px",
                       borderRadius: 6,
                       cursor: "pointer",
+                      border: "none",
+                      background: "transparent",
+                      outline: "none",
                     }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLButtonElement).style.background =
