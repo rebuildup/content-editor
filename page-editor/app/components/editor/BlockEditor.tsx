@@ -1,12 +1,12 @@
 "use client";
 
+import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DragIndicatorRoundedIcon from "@mui/icons-material/DragIndicatorRounded";
-import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
-import { Box, IconButton, Menu, MenuItem, Stack } from "@mui/material";
+import { Box, Menu, MenuItem, Stack } from "@mui/material";
 import { nanoid } from "nanoid";
 import {
-  type JSX,
   type DragEvent,
+  type JSX,
   type KeyboardEvent,
   type MouseEvent,
   useCallback,
@@ -15,6 +15,7 @@ import {
   useState,
 } from "react";
 import { CodeBlock } from "@/app/components/blocks/advanced/CodeBlock";
+import { CustomHtmlBlock } from "@/app/components/blocks/advanced/CustomHtmlBlock";
 import { MathBlock } from "@/app/components/blocks/advanced/MathBlock";
 import { TableOfContentsBlock } from "@/app/components/blocks/advanced/TableOfContentsBlock";
 import { ToggleBlock } from "@/app/components/blocks/advanced/ToggleBlock";
@@ -27,18 +28,17 @@ import { SpacerBlock } from "@/app/components/blocks/basic/SpacerBlock";
 import { TextBlock } from "@/app/components/blocks/basic/TextBlock";
 import { BoardBlock } from "@/app/components/blocks/database/BoardBlock";
 import { CalendarBlock } from "@/app/components/blocks/database/CalendarBlock";
-import { GalleryBlock } from "@/app/components/blocks/database/GalleryBlock";
 import { TableBlock } from "@/app/components/blocks/database/TableBlock";
 import { AudioBlock } from "@/app/components/blocks/media/AudioBlock";
 import { EmbedBlock } from "@/app/components/blocks/media/EmbedBlock";
-import { CustomHtmlBlock } from "@/app/components/blocks/advanced/CustomHtmlBlock";
 import { FileBlock } from "@/app/components/blocks/media/FileBlock";
+import { GalleryBlock } from "@/app/components/blocks/media/GalleryBlock";
 import { ImageBlock } from "@/app/components/blocks/media/ImageBlock";
 import { VideoBlock } from "@/app/components/blocks/media/VideoBlock";
 import { WebBookmarkBlock } from "@/app/components/blocks/media/WebBookmarkBlock";
 import type { BlockComponentProps } from "@/app/components/blocks/types";
 import { createInitialBlock } from "@/lib/editor/factory";
-import type { Block, BlockType, ListItem } from "@/types/blocks";
+import type { Block, BlockType } from "@/types/blocks";
 
 const BLOCK_COMPONENTS: Partial<
   Record<BlockType, (props: BlockComponentProps) => JSX.Element>
@@ -105,6 +105,9 @@ export function BlockEditor({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [menuTarget, setMenuTarget] = useState<string | null>(null);
+  const [addMenuAnchor, setAddMenuAnchor] = useState<null | HTMLElement>(null);
+  const [addMenuTarget, setAddMenuTarget] = useState<string | null>(null);
+  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverInfo, setDragOverInfo] = useState<DragOverInfo | null>(null);
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
@@ -125,11 +128,29 @@ export function BlockEditor({
     [onSelectBlock],
   );
 
+  const openHandleMenu = useCallback(
+    (event: MouseEvent<HTMLButtonElement>, blockId: string) => {
+      setMenuAnchor(event.currentTarget);
+      setMenuTarget(blockId);
+    },
+    [],
+  );
+
+  const openAddMenu = useCallback(
+    (event: MouseEvent<HTMLButtonElement>, blockId: string) => {
+      setAddMenuAnchor(event.currentTarget);
+      setAddMenuTarget(blockId);
+    },
+    [],
+  );
+
   const updateContent = useCallback(
     (id: string, content: string) => {
       applyBlocks((previous) =>
         previous.map((block) =>
-          block.id === id ? normalizeBlockContent(block, content) : block,
+          block.id === id
+            ? normalizeBlockContentOnTyping(block, content)
+            : block,
         ),
       );
     },
@@ -161,8 +182,12 @@ export function BlockEditor({
         return;
       }
       applyBlocks((previous) => {
-        const sourceIndex = previous.findIndex((block) => block.id === sourceId);
-        const targetIndex = previous.findIndex((block) => block.id === targetId);
+        const sourceIndex = previous.findIndex(
+          (block) => block.id === sourceId,
+        );
+        const targetIndex = previous.findIndex(
+          (block) => block.id === targetId,
+        );
         if (sourceIndex === -1 || targetIndex === -1) {
           return previous;
         }
@@ -311,18 +336,112 @@ export function BlockEditor({
       if (readOnly) {
         return;
       }
-      if (event.key !== "Enter" || event.shiftKey) {
+
+      // Backspace: 先頭で押したら、リストを段落+Markdownトークンに戻す
+      if (
+        event.key === "Backspace" &&
+        !event.shiftKey &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        const target = event.currentTarget;
+        const selection = window.getSelection();
+        const isAtStart = (() => {
+          if (!selection || selection.rangeCount === 0) return false;
+          const range = selection.getRangeAt(0).cloneRange();
+          range.selectNodeContents(target);
+          range.setEnd(selection.focusNode ?? target, selection.focusOffset);
+          return range.toString().length === 0;
+        })();
+        const current = blocks.find((b) => b.id === blockId);
+        const contentEmpty = (current?.content ?? "").length === 0;
+        if (isAtStart || contentEmpty) {
+          if (current?.type === "list") {
+            event.preventDefault();
+            const kind =
+              (current.attributes.kind as string) ||
+              (current.attributes.ordered
+                ? "ordered"
+                : current.attributes.checked !== undefined
+                  ? "todo"
+                  : "unordered");
+            const order = (current.attributes.order as number) || 1;
+            const prefix =
+              kind === "todo"
+                ? current.attributes.checked
+                  ? "[x] "
+                  : "[ ] "
+                : kind === "ordered"
+                  ? `${order}. `
+                  : "- ";
+            applyBlocks((prev) =>
+              prev.map((b) =>
+                b.id === blockId
+                  ? {
+                      ...b,
+                      type: "paragraph",
+                      content: `${prefix}${b.content ?? ""}`,
+                      attributes: {},
+                    }
+                  : b,
+              ),
+            );
+            setPendingFocusId(blockId);
+            setActive(blockId);
+            return;
+          }
+          if (current?.type === "quote" || current?.type === "callout") {
+            event.preventDefault();
+            applyBlocks((prev) =>
+              prev.map((b) =>
+                b.id === blockId
+                  ? {
+                      ...b,
+                      type: "paragraph",
+                      content: `> ${b.content ?? ""}`,
+                      attributes: {},
+                    }
+                  : b,
+              ),
+            );
+            setPendingFocusId(blockId);
+            setActive(blockId);
+            return;
+          }
+        }
+      }
+
+      // スペース入力時もリスト変換を実行
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      if (event.key === "Enter" && event.shiftKey) {
         return;
       }
 
       const target = event.currentTarget;
-      if (!isCaretAtEnd(target)) {
+      // Enter の場合は末尾でないと実行しない、スペースの場合は常に実行
+      if (event.key === "Enter" && !isCaretAtEnd(target)) {
         return;
       }
 
+      // Space: 現在のブロックをリストへ正規化するだけ（新規ブロックは作らない）
+      if (event.key === " ") {
+        const textContent = target.textContent ?? "";
+        applyBlocks((previous) =>
+          previous.map((block) =>
+            block.id === blockId
+              ? normalizeBlockContent(block, textContent)
+              : block,
+          ),
+        );
+        return;
+      }
+
+      // Enter: 従来通り、正規化＋必要なら次行を生成
       event.preventDefault();
       const textContent = target.textContent ?? "";
-      const newBlock = createInitialBlock("paragraph");
+      let newBlock = createInitialBlock("paragraph");
 
       applyBlocks((previous) => {
         const index = previous.findIndex((block) => block.id === blockId);
@@ -330,7 +449,31 @@ export function BlockEditor({
           return previous;
         }
         const next = [...previous];
-        next[index] = normalizeBlockContent(next[index], textContent);
+        const normalized = normalizeBlockContent(next[index], textContent);
+        next[index] = normalized;
+
+        // リストの場合は同種の次要素を自動生成
+        if (normalized.type === "list") {
+          const kind =
+            (normalized.attributes.kind as string) ||
+            (normalized.attributes.ordered
+              ? "ordered"
+              : normalized.attributes.checked !== undefined
+                ? "todo"
+                : "unordered");
+          const currentOrder = (normalized.attributes.order as number) || 1;
+          newBlock = {
+            ...createInitialBlock("list"),
+            content: "",
+            attributes:
+              kind === "ordered"
+                ? { kind: "ordered", order: currentOrder + 1 }
+                : kind === "todo"
+                  ? { kind: "todo", checked: false }
+                  : { kind: "unordered" },
+          } as Block;
+        }
+
         next.splice(index + 1, 0, newBlock);
         return next;
       });
@@ -338,15 +481,7 @@ export function BlockEditor({
       setPendingFocusId(newBlock.id);
       setActive(newBlock.id);
     },
-    [applyBlocks, readOnly, setActive],
-  );
-
-  const handleOpenMenu = useCallback(
-    (event: MouseEvent<HTMLButtonElement>, blockId: string) => {
-      setMenuAnchor(event.currentTarget);
-      setMenuTarget(blockId);
-    },
-    [],
+    [applyBlocks, readOnly, setActive, blocks],
   );
 
   const handleCloseMenu = useCallback(() => {
@@ -354,10 +489,60 @@ export function BlockEditor({
     setMenuTarget(null);
   }, []);
 
+  const handleCloseAddMenu = useCallback(() => {
+    setAddMenuAnchor(null);
+    setAddMenuTarget(null);
+  }, []);
+
+  const handleBlockMouseEnter = useCallback((blockId: string) => {
+    setHoveredBlockId(blockId);
+  }, []);
+
+  const handleBlockMouseLeave = useCallback(() => {
+    setHoveredBlockId(null);
+  }, []);
+
   const isMenuOpen = Boolean(menuAnchor);
+  const isAddMenuOpen = Boolean(addMenuAnchor);
   const _selectedBlock = useMemo(
     () => blocks.find((block) => block.id === menuTarget),
     [blocks, menuTarget],
+  );
+  const copyBlockToClipboard = useCallback(
+    async (id: string) => {
+      const target = blocks.find((b) => b.id === id);
+      if (!target) return;
+      try {
+        // 単一ブロックをMarkdown化してコピー
+        const { convertBlocksToMarkdown } = await import("@/lib/conversion");
+        const md = convertBlocksToMarkdown([target]);
+        await navigator.clipboard.writeText(md);
+      } catch {
+        // フォールバックでJSON文字列
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(target));
+        } catch {}
+      }
+    },
+    [blocks],
+  );
+
+  const convertBlockType = useCallback(
+    (id: string, nextType: BlockType) => {
+      applyBlocks((previous) =>
+        previous.map((block) => {
+          if (block.id !== id) return block;
+          const { createEmptyBlock } = require("@/lib/conversion");
+          const defaults = createEmptyBlock(nextType);
+          return {
+            ...block,
+            type: nextType,
+            attributes: defaults.attributes,
+          } as Block;
+        }),
+      );
+    },
+    [applyBlocks],
   );
 
   return (
@@ -379,7 +564,9 @@ export function BlockEditor({
         const dropIndicator =
           dragOverInfo?.id === block.id ? dragOverInfo.position : null;
         const supportsKeyboardShortcuts =
-          block.type === "paragraph" || block.type === "heading";
+          block.type === "paragraph" ||
+          block.type === "heading" ||
+          block.type === "list";
         const handleBlockKeyDown = supportsKeyboardShortcuts
           ? (event: KeyboardEvent<HTMLDivElement>) =>
               handleKeyDown(block.id, event)
@@ -389,6 +576,8 @@ export function BlockEditor({
           <Box
             key={block.id}
             onClick={() => setActive(block.id)}
+            onMouseEnter={() => handleBlockMouseEnter(block.id)}
+            onMouseLeave={handleBlockMouseLeave}
             onDragEnter={(event) => handleDragOver(event, block.id)}
             onDragOver={(event) => handleDragOver(event, block.id)}
             onDragLeave={(event) => handleDragLeave(event, block.id)}
@@ -417,45 +606,76 @@ export function BlockEditor({
             }}
             data-block-id={block.id}
           >
-            {!readOnly && (
+            {!readOnly && (hoveredBlockId === block.id || isActive) && (
               <Box
-                component="span"
-                role="button"
-                aria-label="Reorder block"
+                component="button"
+                aria-label="Block handle"
                 draggable
                 tabIndex={0}
+                onClick={(event) =>
+                  openHandleMenu(
+                    event as unknown as MouseEvent<HTMLButtonElement>,
+                    block.id,
+                  )
+                }
                 onDragStart={(event) => handleDragStart(event, block.id)}
                 onDragEnd={handleDragEnd}
                 sx={{
+                  position: "absolute",
+                  top: 8,
+                  left: -36,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  background: "transparent",
+                  border: 0,
+                  padding: 0,
+                  lineHeight: 0,
                   width: 28,
-                  minHeight: "2rem",
+                  height: 28,
                   cursor: "grab",
                   color: isActive ? "text.primary" : "text.secondary",
-                  "&:active": {
-                    cursor: "grabbing",
-                  },
+                  "&:active": { cursor: "grabbing" },
                 }}
               >
                 <DragIndicatorRoundedIcon fontSize="small" />
+              </Box>
+            )}
+            {!readOnly && (hoveredBlockId === block.id || isActive) && (
+              <Box
+                component="button"
+                aria-label="Add block"
+                tabIndex={0}
+                onClick={(event) =>
+                  openAddMenu(
+                    event as unknown as MouseEvent<HTMLButtonElement>,
+                    block.id,
+                  )
+                }
+                sx={{
+                  position: "absolute",
+                  top: 8,
+                  left: -64,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "transparent",
+                  border: 0,
+                  padding: 0,
+                  lineHeight: 0,
+                  width: 28,
+                  height: 28,
+                  cursor: "pointer",
+                  color: isActive ? "text.primary" : "text.secondary",
+                }}
+              >
+                <AddRoundedIcon fontSize="small" />
               </Box>
             )}
             <Stack
               spacing={1}
               sx={{ flex: 1, px: 0, py: 0, position: "relative" }}
             >
-              {!readOnly && (
-                <IconButton
-                  size="small"
-                  onClick={(event) => handleOpenMenu(event, block.id)}
-                  sx={{ position: "absolute", top: 4, right: 4 }}
-                  aria-label="Block menu"
-                >
-                  <MoreHorizRoundedIcon fontSize="small" />
-                </IconButton>
-              )}
               <Box sx={{ px: 0.5, py: 0.25 }}>
                 <Component
                   block={block}
@@ -501,19 +721,50 @@ export function BlockEditor({
         >
           Delete block
         </MenuItem>
-        <MenuItem disabled divider>
-          Insert after
+        <MenuItem
+          onClick={() => {
+            if (menuTarget) void copyBlockToClipboard(menuTarget);
+            handleCloseMenu();
+          }}
+        >
+          Copy block
         </MenuItem>
+        <MenuItem disabled divider>
+          Convert to
+        </MenuItem>
+        {AVAILABLE_INSERT_TYPES.filter((t) => t !== _selectedBlock?.type).map(
+          (type) => (
+            <MenuItem
+              key={`convert-${type}`}
+              onClick={() => {
+                if (menuTarget) convertBlockType(menuTarget, type);
+                handleCloseMenu();
+              }}
+            >
+              {type}
+            </MenuItem>
+          ),
+        )}
+      </Menu>
+
+      <Menu
+        anchorEl={addMenuAnchor}
+        open={isAddMenuOpen}
+        onClose={handleCloseAddMenu}
+        slotProps={{
+          paper: { sx: { bgcolor: "background.paper" } },
+        }}
+      >
         {AVAILABLE_INSERT_TYPES.map((type) => (
           <MenuItem
-            key={`menu-${type}`}
+            key={`add-${type}`}
             onClick={() => {
-              if (menuTarget) {
-                insertBlockAfter(menuTarget, type);
+              if (addMenuTarget) {
+                insertBlockAfter(addMenuTarget, type);
               } else {
                 insertBlockAfter(null, type);
               }
-              handleCloseMenu();
+              handleCloseAddMenu();
             }}
           >
             {type}
@@ -568,6 +819,34 @@ function normalizeBlockContent(block: Block, content: string): Block {
   };
 }
 
+function normalizeBlockContentOnTyping(block: Block, content: string): Block {
+  const sanitized = content.replace(/\u00A0/g, " ");
+
+  if (block.type === "paragraph") {
+    return transformParagraphBlockOnTyping(block, sanitized);
+  }
+
+  if (block.type === "heading") {
+    if (/^\s*#{1,6}\s+/.test(sanitized)) {
+      return {
+        ...block,
+        content: sanitized,
+      };
+    }
+    return {
+      ...block,
+      type: "paragraph",
+      content: sanitized,
+      attributes: {},
+    };
+  }
+
+  return {
+    ...block,
+    content: sanitized,
+  };
+}
+
 function transformParagraphBlock(block: Block, content: string): Block {
   const trimmed = content.trimStart();
 
@@ -593,39 +872,71 @@ function transformParagraphBlock(block: Block, content: string): Block {
     };
   }
 
-  if (/^\[( |x|X)\]\s+/.test(trimmed)) {
+  // リスト自動変換（半角スペース必須）
+  // チェックリスト [ ] / [x]
+  const todoMatch = trimmed.match(/^\[( |x|X)\]\s+(.*)$/);
+  if (todoMatch) {
     return {
       ...block,
       type: "list",
-      content: "",
-      attributes: {
-        ordered: false,
-        items: createListItemsFromLines(content, "todo"),
-      },
+      content: todoMatch[2],
+      attributes: { kind: "todo", checked: todoMatch[1].toLowerCase() === "x" },
     };
   }
 
-  if (/^[-*+]\s+/.test(trimmed)) {
+  // ドットリスト -, *, +
+  const unorderedMatch = trimmed.match(/^[-*+]\s+(.*)$/);
+  if (unorderedMatch) {
     return {
       ...block,
       type: "list",
-      content: "",
-      attributes: {
-        ordered: false,
-        items: createListItemsFromLines(content, "unordered"),
-      },
+      content: unorderedMatch[1],
+      attributes: { kind: "unordered" },
     };
   }
 
-  if (/^\d+\.\s+/.test(trimmed)) {
+  // 数字リスト 1.
+  const orderedMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+  if (orderedMatch) {
+    const order = parseInt(orderedMatch[1] ?? "1", 10) || 1;
     return {
       ...block,
       type: "list",
+      content: orderedMatch[2],
+      attributes: { kind: "ordered", order },
+    };
+  }
+
+  // Divider: --- のみの行を区切り線に変換
+  if (/^---+$/.test(trimmed)) {
+    return {
+      ...block,
+      type: "divider",
       content: "",
-      attributes: {
-        ordered: true,
-        items: createListItemsFromLines(content, "ordered"),
-      },
+      attributes: {},
+    };
+  }
+
+  // Callout: "> [!NOTE]" のような記述を含む場合、callout ブロックに変換（1行目はそのまま保持）
+  if (/^>\s*\[!(NOTE|WARNING|CALLOUT|TIP|CAUTION|IMPORTANT)\]/i.test(content)) {
+    // 先頭の "> " を取り除いて [!TYPE] は保持
+    const withoutArrow = content.replace(/^>\s*/, "");
+    return {
+      ...block,
+      type: "callout",
+      content: withoutArrow,
+      attributes: {},
+    };
+  }
+
+  // 引用 > で始まる場合は Quote ブロックに変換（全文1ブロック）
+  const quoteMatch = trimmed.match(/^>\s+(.*)$/);
+  if (quoteMatch) {
+    return {
+      ...block,
+      type: "quote",
+      content: quoteMatch[1],
+      attributes: {},
     };
   }
 
@@ -637,59 +948,36 @@ function transformParagraphBlock(block: Block, content: string): Block {
   };
 }
 
-function createListItemsFromLines(
-  content: string,
-  mode: "unordered" | "ordered" | "todo",
-): ListItem[] {
-  const rawLines = content.split(/\r?\n/);
-  const items: ListItem[] = [];
+function transformParagraphBlockOnTyping(block: Block, content: string): Block {
+  const trimmed = content.trimStart();
 
-  rawLines.forEach((line) => {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    if (mode === "todo") {
-      const match = trimmed.match(/^\[( |x|X)\]\s*(.*)$/);
-      const checkedToken = match?.[1] ?? " ";
-      const text = match?.[2] ?? trimmed.replace(/^\[( |x|X)\]\s*/, "");
-      items.push({
-        id: nanoid(6),
-        content: text,
-        checked: checkedToken.toLowerCase() === "x",
-      });
-      return;
-    }
-
-    if (mode === "unordered") {
-      const match = trimmed.match(/^[-*+]\s+(.*)$/);
-      const text = match?.[1] ?? trimmed.replace(/^[-*+]\s*/, "");
-      items.push({
-        id: nanoid(6),
-        content: text,
-      });
-      return;
-    }
-
-    if (mode === "ordered") {
-      const match = trimmed.match(/^\d+\.\s+(.*)$/);
-      const text = match?.[1] ?? trimmed.replace(/^\d+\.\s*/, "");
-      items.push({
-        id: nanoid(6),
-        content: text,
-      });
-    }
-  });
-
-  if (items.length === 0) {
-    items.push({
-      id: nanoid(6),
+  if (!trimmed) {
+    return {
+      ...block,
+      type: "paragraph",
       content: "",
-    });
+      attributes: {},
+    };
   }
 
-  return items;
+  const headingMatch = trimmed.match(/^(#{1,6})\s+\S/);
+  if (headingMatch) {
+    const level = headingMatch[1].length;
+    return {
+      ...block,
+      type: "heading",
+      content,
+      attributes: { level },
+    };
+  }
+
+  // タイピング中はリスト自動変換を行わない（タグ編集を妨げないため）
+  return {
+    ...block,
+    type: "paragraph",
+    content,
+    attributes: {},
+  };
 }
 
 function isCaretAtEnd(element: HTMLElement): boolean {

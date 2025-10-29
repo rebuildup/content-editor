@@ -106,11 +106,13 @@ export function ArticleList({
                         <Typography
                           variant="body1"
                           fontWeight={600}
+                          component="div"
                           sx={{ lineHeight: 1.4 }}
                         >
                           {page.frontmatter.title || "Untitled page"}
                         </Typography>
                       }
+                      primaryTypographyProps={{ component: "div" }}
                       secondary={
                         <Box>
                           <Typography
@@ -129,6 +131,7 @@ export function ArticleList({
                           </Typography>
                         </Box>
                       }
+                      secondaryTypographyProps={{ component: "div" }}
                     />
                     <Button
                       size="small"

@@ -60,7 +60,11 @@ export async function apiRequest<T>(
     } catch {
       details = await response.text();
     }
-    console.error(`[API] Request failed:`, { url, status: response.status, details });
+    console.error(`[API] Request failed:`, {
+      url,
+      status: response.status,
+      details,
+    });
     throw new ApiError(
       `Request to ${url} failed with status ${response.status}`,
       response.status,
@@ -69,7 +73,7 @@ export async function apiRequest<T>(
   }
 
   try {
-    const result = await response.json() as T;
+    const result = (await response.json()) as T;
     console.log(`[API] Request successful:`, result);
     return result;
   } catch (error) {

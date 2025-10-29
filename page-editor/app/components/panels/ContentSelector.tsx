@@ -108,7 +108,10 @@ export function ContentSelector({
                 label="Content"
                 value={selectedContentId ?? ""}
                 onChange={(event) => {
-                  console.log("[ContentSelector] Content selected:", event.target.value);
+                  console.log(
+                    "[ContentSelector] Content selected:",
+                    event.target.value,
+                  );
                   onSelect(event.target.value);
                 }}
                 MenuProps={{

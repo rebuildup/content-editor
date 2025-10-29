@@ -4,15 +4,15 @@ import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import ImageRoundedIcon from "@mui/icons-material/ImageRounded";
 import {
   Alert,
+  Box,
   Button,
-  Card,
-  CardContent,
-  CardMedia,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { ChangeEvent, useCallback, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import { EditableText } from "@/app/components/editor/EditableText";
 import { getMediaUrl, uploadMediaFile } from "@/lib/api/media";
 import { formatFileSize } from "@/lib/utils/file-upload";
@@ -30,6 +30,12 @@ export function ImageBlock({
   const filename =
     (block.attributes.filename as string | undefined) ?? undefined;
   const size = block.attributes.size as number | undefined;
+  const widthPercent = Number(block.attributes.widthPercent ?? 100);
+  const heightPx =
+    block.attributes.heightPx === undefined
+      ? undefined
+      : Math.max(0, Number(block.attributes.heightPx));
+  const align = (block.attributes.align as string | undefined) ?? "left"; // left|center|right
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -83,43 +89,143 @@ export function ImageBlock({
     [alt, block.content, contentId, onAttributesChange],
   );
 
+  const alignToText =
+    align === "center" ? "center" : align === "right" ? "right" : "left";
+  const imageBoxWidth = Math.max(
+    0,
+    Math.min(100, Number.isNaN(widthPercent) ? 100 : widthPercent),
+  );
+
   return (
-    <Card
-      variant="outlined"
+    <Box
       sx={{
-        borderRadius: 3,
-        border: (theme) => `1px solid ${theme.palette.divider}`,
-        bgcolor: "rgba(255,255,255,0.02)",
+        position: "relative",
+        borderRadius: 2,
+        p: 0,
+        "&:hover .image-controls": { opacity: 1, pointerEvents: "auto" },
       }}
     >
-      {src ? (
-        <CardMedia
-          component="img"
-          height="220"
-          src={src}
-          alt={alt}
-          sx={{ objectFit: "cover" }}
-        />
-      ) : (
-        <Stack
-          alignItems="center"
-          justifyContent="center"
-          spacing={1}
-          sx={{ py: 6, color: "text.secondary" }}
-        >
-          <ImageRoundedIcon fontSize="large" color="primary" />
-          <Typography variant="body2">Paste an image URL</Typography>
-        </Stack>
-      )}
-      <CardContent>
-        <Stack spacing={2}>
-          {!readOnly && (
-            <Stack spacing={1}>
+      <Box sx={{ textAlign: alignToText }}>
+        {src ? (
+          <Box
+            component="img"
+            src={src}
+            alt={alt}
+            sx={{
+              display: "inline-block",
+              width: `${imageBoxWidth}%`,
+              height: heightPx ? `${heightPx}px` : "auto",
+              objectFit: heightPx ? "cover" : "contain",
+              borderRadius: 1,
+              border: (theme) => `1px solid ${theme.palette.divider}`,
+              bgcolor: "rgba(255,255,255,0.02)",
+            }}
+          />
+        ) : (
+          <Stack
+            alignItems="center"
+            justifyContent="center"
+            spacing={1}
+            sx={{ py: 6, color: "text.secondary" }}
+          >
+            <ImageRoundedIcon fontSize="large" color="primary" />
+            <Typography variant="body2">Paste an image URL</Typography>
+          </Stack>
+        )}
+      </Box>
+
+      {/* Controls overlay */}
+      {!readOnly && (
+        <>
+          {/* Top: style controls */}
+          <Box
+            className="image-controls"
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              right: 8,
+              bgcolor: "rgba(0,0,0,0.35)",
+              borderRadius: 1,
+              p: 1,
+              opacity: 0,
+              pointerEvents: "none",
+              transition: "opacity 120ms ease",
+            }}
+          >
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={1.5}
+              alignItems={{ xs: "stretch", sm: "center" }}
+            >
+              <TextField
+                label="Width (%)"
+                type="number"
+                inputProps={{ min: 0, max: 100 }}
+                sx={{ width: 140 }}
+                value={imageBoxWidth}
+                onChange={(e) =>
+                  onAttributesChange({
+                    widthPercent: Math.max(
+                      0,
+                      Math.min(100, Number(e.target.value ?? 100)),
+                    ),
+                  })
+                }
+              />
+              <TextField
+                label="Height (px)"
+                type="number"
+                inputProps={{ min: 0, max: 4000 }}
+                sx={{ width: 160 }}
+                value={heightPx ?? ""}
+                onChange={(e) => {
+                  const v =
+                    e.target.value === ""
+                      ? undefined
+                      : Math.max(0, Math.min(4000, Number(e.target.value)));
+                  onAttributesChange({ heightPx: v });
+                }}
+              />
+              <Select
+                size="small"
+                value={align}
+                onChange={(e) => onAttributesChange({ align: e.target.value })}
+                sx={{ width: 140 }}
+              >
+                <MenuItem value="left">Left</MenuItem>
+                <MenuItem value="center">Center</MenuItem>
+                <MenuItem value="right">Right</MenuItem>
+              </Select>
+            </Stack>
+          </Box>
+
+          {/* Bottom: meta + upload */}
+          <Box
+            className="image-controls"
+            sx={{
+              position: "absolute",
+              bottom: 8,
+              left: 8,
+              right: 8,
+              bgcolor: "rgba(0,0,0,0.35)",
+              borderRadius: 1,
+              p: 1,
+              opacity: 0,
+              pointerEvents: "none",
+              transition: "opacity 120ms ease",
+              overflowX: "auto",
+            }}
+          >
+            {/* Row 1: Upload button only (full width) */}
+            <Stack direction="row" spacing={1.5} alignItems="center">
               <Button
                 variant="outlined"
+                fullWidth
                 startIcon={<CloudUploadRoundedIcon />}
                 component="label"
                 disabled={!contentId || isUploading}
+                sx={{ whiteSpace: "nowrap" }}
               >
                 <input
                   ref={fileInputRef}
@@ -130,57 +236,57 @@ export function ImageBlock({
                 />
                 {isUploading ? "Uploading..." : "Upload image"}
               </Button>
-              {!contentId ? (
-                <Alert severity="info">
-                  Select a content entry to enable uploads.
-                </Alert>
-              ) : (
-                <Typography variant="caption" color="text.secondary">
-                  Uploaded files are stored inside the selected content
-                  database.
-                </Typography>
-              )}
-              {uploadError && <Alert severity="error">{uploadError}</Alert>}
             </Stack>
-          )}
-          {filename && (
-            <Typography variant="caption" color="text.secondary">
-              Current file: {filename}
-              {typeof size === "number"
-                ? ` · ${formatFileSize(size)}`
-                : ""}
-            </Typography>
-          )}
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              label="Image URL"
-              fullWidth
-              value={src}
-              onChange={(event) =>
-                onAttributesChange({ src: event.target.value })
-              }
-              placeholder="https://example.com/image.png"
-              disabled={readOnly}
-            />
-            <TextField
-              label="Alt text"
-              fullWidth
-              value={alt}
-              onChange={(event) =>
-                onAttributesChange({ alt: event.target.value })
-              }
-              placeholder="Describe the image"
-              disabled={readOnly}
-            />
-          </Stack>
-          <EditableText
-            value={block.content}
-            onChange={onContentChange}
-            readOnly={readOnly}
-            placeholder="Caption"
-          />
-        </Stack>
-      </CardContent>
-    </Card>
+            {uploadError && (
+              <Alert severity="error" sx={{ mt: 1 }}>
+                {uploadError}
+              </Alert>
+            )}
+            {filename && (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                Current file: {filename}
+                {typeof size === "number" ? ` · ${formatFileSize(size)}` : ""}
+              </Typography>
+            )}
+
+            {/* Row 2: URL + Alt */}
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              sx={{ mt: 1.5 }}
+            >
+              <TextField
+                label="URL"
+                fullWidth
+                value={src}
+                onChange={(e) => onAttributesChange({ src: e.target.value })}
+                placeholder="https://..."
+              />
+              <TextField
+                label="Alt"
+                fullWidth
+                value={alt}
+                onChange={(e) => onAttributesChange({ alt: e.target.value })}
+              />
+            </Stack>
+
+            {/* Row 3: Caption */}
+            <Box sx={{ mt: 1 }}>
+              <EditableText
+                value={block.content}
+                onChange={onContentChange}
+                readOnly={false}
+                placeholder="Caption"
+              />
+            </Box>
+          </Box>
+        </>
+      )}
+    </Box>
   );
 }

@@ -22,11 +22,20 @@ import { convertMarkdownToBlocks } from "@/lib/conversion";
 import { createInitialBlock } from "@/lib/editor/factory";
 import { useAutoSave, useEditorState } from "@/lib/editor/state";
 import { normalizeSlug } from "@/lib/utils/validation";
-import type { BlockType } from "@/types/blocks";
+import type { Block, BlockType } from "@/types/blocks";
 import type { MarkdownPage } from "@/types/markdown";
 import type { MediaItem } from "@/types/media";
 
-const INITIAL_BLOCKS = [createInitialBlock("paragraph")];
+// SSR/CSR で ID が変わるとハイドレーション不一致が発生するため、
+// 初期ブロックは固定 ID で定義して安定化させる
+const INITIAL_BLOCKS: Block[] = [
+  {
+    id: "initial-paragraph",
+    type: "paragraph",
+    content: "",
+    attributes: {},
+  },
+];
 
 interface ToastMessage {
   type: "success" | "error";
@@ -82,7 +91,10 @@ export default function PageEditorHome() {
         );
       } catch (error) {
         console.error("[PageEditor] Failed to load pages", error);
-        showMessage({ type: "error", text: `Failed to load pages: ${error instanceof Error ? error.message : 'Unknown error'}` });
+        showMessage({
+          type: "error",
+          text: `Failed to load pages: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
       } finally {
         setPagesLoading(false);
       }
@@ -104,7 +116,10 @@ export default function PageEditorHome() {
         setMedia(items);
       } catch (error) {
         console.error("[PageEditor] Failed to load media", error);
-        showMessage({ type: "error", text: `Failed to load media: ${error instanceof Error ? error.message : 'Unknown error'}` });
+        showMessage({
+          type: "error",
+          text: `Failed to load media: ${error instanceof Error ? error.message : "Unknown error"}`,
+        });
       } finally {
         setMediaLoading(false);
       }

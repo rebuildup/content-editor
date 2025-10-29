@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { getMedia } from "@/app/lib/media-manager";
 
 export const runtime = "nodejs";
@@ -64,5 +64,3 @@ export function OPTIONS() {
     headers: CORS_HEADERS,
   });
 }
-
-

@@ -206,8 +206,6 @@ function deriveMediaBuffer(source: MediaRow["data"]): Buffer | undefined {
   return undefined;
 }
 
-
-
 function ensureContentRow(db: Database.Database, contentId: string) {
   if (!contentId) {
     return;
@@ -243,4 +241,3 @@ function ensureContentRow(db: Database.Database, contentId: string) {
     )`,
   ).run(payload);
 }
-

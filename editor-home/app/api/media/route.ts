@@ -28,17 +28,20 @@ export async function GET(req: Request) {
 
       // バイナリデータをBase64に変換
       const base64 = media.data?.toString("base64");
-      return Response.json({
-        ...media,
-        data: undefined,
-        base64,
-      }, {
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      return Response.json(
+        {
+          ...media,
+          data: undefined,
+          base64,
         },
-      });
+        {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          },
+        },
+      );
     }
 
     // メディア一覧を取得（バイナリデータは含めない）

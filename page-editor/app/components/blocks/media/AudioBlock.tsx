@@ -4,17 +4,15 @@ import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import GraphicEqRoundedIcon from "@mui/icons-material/GraphicEqRounded";
 import {
   Alert,
+  Box,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
   FormControlLabel,
   Stack,
   Switch,
   TextField,
   Typography,
 } from "@mui/material";
-import { ChangeEvent, useCallback, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useRef, useState } from "react";
 import { getMediaUrl, uploadMediaFile } from "@/lib/api/media";
 import { formatFileSize } from "@/lib/utils/file-upload";
 import type { BlockComponentProps } from "../types";
@@ -73,31 +71,45 @@ export function AudioBlock({
   );
 
   return (
-    <Card
-      variant="outlined"
+    <Box
       sx={{
-        borderRadius: 3,
+        position: "relative",
         border: (theme) => `1px solid ${theme.palette.divider}`,
+        borderRadius: 2,
+        p: 1,
         bgcolor: "rgba(255,255,255,0.02)",
+        transition: "padding-top 120ms ease",
+        "&:hover .audio-controls": { opacity: 1, pointerEvents: "auto" },
+        "&:hover .audio-preview": { mt: 28 },
       }}
     >
-      <CardHeader
-        avatar={<GraphicEqRoundedIcon color="primary" />}
-        title="Audio block"
-        subheader="Provide an audio source URL"
-        sx={{
-          "& .MuiCardHeader-subheader": { color: "text.secondary" },
-        }}
-      />
-      <CardContent sx={{ pt: 0 }}>
-        <Stack spacing={2}>
-          {!readOnly && (
-            <Stack spacing={1}>
+      {/* Top controls overlay (appears on hover) */}
+      {!readOnly && (
+        <Box
+          className="audio-controls"
+          sx={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            right: 8,
+            bgcolor: "rgba(0,0,0,0.35)",
+            borderRadius: 1,
+            p: 1,
+            opacity: 0,
+            pointerEvents: "none",
+            transition: "opacity 120ms ease",
+          }}
+        >
+          <Stack spacing={1.5}>
+            {/* Row 1: Upload full width */}
+            <Stack direction="row" spacing={1.5} alignItems="center">
               <Button
                 variant="outlined"
+                fullWidth
                 startIcon={<CloudUploadRoundedIcon />}
                 component="label"
                 disabled={!contentId || isUploading}
+                sx={{ whiteSpace: "nowrap" }}
               >
                 <input
                   ref={fileInputRef}
@@ -108,78 +120,76 @@ export function AudioBlock({
                 />
                 {isUploading ? "Uploading..." : "Upload audio"}
               </Button>
-              {!contentId ? (
-                <Alert severity="info">
-                  Select a content entry to enable uploads.
-                </Alert>
-              ) : (
-                <Typography variant="caption" color="text.secondary">
-                  Uploaded files are stored inside the selected content
-                  database.
-                </Typography>
-              )}
-              {uploadError && <Alert severity="error">{uploadError}</Alert>}
             </Stack>
-          )}
-          {filename && (
-            <Typography variant="caption" color="text.secondary">
-              Current file: {filename}
-              {typeof size === "number"
-                ? ` - ${formatFileSize(size)}`
-                : ""}
-            </Typography>
-          )}
-          <TextField
-            label="Audio URL"
-            fullWidth
-            value={src}
-            onChange={(event) =>
-              onAttributesChange({ src: event.target.value })
-            }
-            disabled={readOnly}
-            placeholder="https://example.com/audio.mp3"
-          />
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={autoplay}
-                  onChange={(event) =>
-                    onAttributesChange({ autoplay: event.target.checked })
-                  }
-                  disabled={readOnly}
-                />
-              }
-              label="Autoplay"
+            {uploadError && <Alert severity="error">{uploadError}</Alert>}
+            {filename && (
+              <Typography variant="caption" color="text.secondary">
+                Current file: {filename}
+                {typeof size === "number" ? ` · ${formatFileSize(size)}` : ""}
+              </Typography>
+            )}
+
+            {/* Row 2: URL */}
+            <TextField
+              label="Audio URL"
+              fullWidth
+              value={src}
+              onChange={(e) => onAttributesChange({ src: e.target.value })}
+              placeholder="https://example.com/audio.mp3"
             />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={controls}
-                  onChange={(event) =>
-                    onAttributesChange({ controls: event.target.checked })
-                  }
-                  disabled={readOnly}
-                />
-              }
-              label="Show controls"
-            />
+
+            {/* Row 3: toggles */}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={autoplay}
+                    onChange={(e) =>
+                      onAttributesChange({ autoplay: e.target.checked })
+                    }
+                  />
+                }
+                label="Autoplay"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={controls}
+                    onChange={(e) =>
+                      onAttributesChange({ controls: e.target.checked })
+                    }
+                  />
+                }
+                label="Controls"
+              />
+            </Stack>
           </Stack>
-          {src ? (
-            /* biome-ignore lint/a11y/useMediaCaption: media preview in editor */
-            <audio
-              src={src}
-              controls={controls}
-              autoPlay={autoplay}
-              style={{ width: "100%" }}
-            />
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              Upload an audio file or paste a URL to enable preview.
-            </Typography>
-          )}
-        </Stack>
-      </CardContent>
-    </Card>
+        </Box>
+      )}
+
+      {/* Preview area (moves down on hover to avoid overlap) */}
+      <Box className="audio-preview" sx={{ transition: "margin 120ms ease" }}>
+        {src ? (
+          <audio
+            src={src}
+            controls={controls}
+            autoPlay={autoplay}
+            style={{ width: "100%" }}
+          >
+            <track kind="captions" />
+          </audio>
+        ) : (
+          <Stack
+            alignItems="center"
+            justifyContent="center"
+            spacing={1}
+            sx={{ py: 4, color: "text.secondary" }}
+          >
+            <GraphicEqRoundedIcon color="primary" />
+            <Typography variant="body2">Paste an audio URL</Typography>
+          </Stack>
+        )}
+      </Box>
+    </Box>
   );
 }

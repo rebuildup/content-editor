@@ -45,15 +45,12 @@ export function CustomHtmlBlock({
     }
   }, [readOnly]);
 
-  const handleModeChange = useCallback(
-    (_: unknown, next: ViewMode | null) => {
-      if (!next) {
-        return;
-      }
-      setMode(next);
-    },
-    [],
-  );
+  const handleModeChange = useCallback((_: unknown, next: ViewMode | null) => {
+    if (!next) {
+      return;
+    }
+    setMode(next);
+  }, []);
 
   useEffect(() => {
     if (!previewRef.current || (mode !== "preview" && !readOnly)) {
@@ -72,7 +69,7 @@ export function CustomHtmlBlock({
       replacement.textContent = script.textContent;
       script.replaceWith(replacement);
     });
-  }, [sanitizedHtml, mode, readOnly]);
+  }, [mode, readOnly]);
 
   return (
     <Card
@@ -109,8 +106,8 @@ export function CustomHtmlBlock({
       <CardContent sx={{ pt: 0 }}>
         <Stack spacing={2}>
           <Alert severity="warning" variant="outlined">
-            HTML embeds render live inside the editor. Only paste HTML from trusted
-            sources. Scripts are executed as-is.
+            HTML embeds render live inside the editor. Only paste HTML from
+            trusted sources. Scripts are executed as-is.
           </Alert>
           {mode === "preview" || readOnly ? (
             <Box
@@ -132,6 +129,7 @@ export function CustomHtmlBlock({
                       maxWidth: "100%",
                     },
                   }}
+                  /* biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized and intentionally rendered HTML */
                   dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
                 />
               ) : (
