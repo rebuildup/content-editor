@@ -159,9 +159,18 @@ export function MediaManager({
                         flexDirection: "column",
                         gap: 0.25,
                         flex: 1,
+                        minWidth: 0,
                       }}
                     >
-                      <Typography variant="subtitle2" fontWeight={600}>
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={600}
+                        sx={{
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {item.filename}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">

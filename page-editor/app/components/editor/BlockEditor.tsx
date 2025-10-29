@@ -30,7 +30,6 @@ import { BoardBlock } from "@/app/components/blocks/database/BoardBlock";
 import { CalendarBlock } from "@/app/components/blocks/database/CalendarBlock";
 import { TableBlock } from "@/app/components/blocks/database/TableBlock";
 import { AudioBlock } from "@/app/components/blocks/media/AudioBlock";
-import { EmbedBlock } from "@/app/components/blocks/media/EmbedBlock";
 import { FileBlock } from "@/app/components/blocks/media/FileBlock";
 import { GalleryBlock } from "@/app/components/blocks/media/GalleryBlock";
 import { ImageBlock } from "@/app/components/blocks/media/ImageBlock";
@@ -55,7 +54,6 @@ const BLOCK_COMPONENTS: Partial<
   audio: AudioBlock,
   file: FileBlock,
   bookmark: WebBookmarkBlock,
-  embed: EmbedBlock,
   code: CodeBlock,
   math: MathBlock,
   toggle: ToggleBlock,
@@ -163,12 +161,12 @@ export function BlockEditor({
         previous.map((block) =>
           block.id === id
             ? {
-                ...block,
-                attributes: {
-                  ...block.attributes,
-                  ...attributes,
-                },
-              }
+              ...block,
+              attributes: {
+                ...block.attributes,
+                ...attributes,
+              },
+            }
             : block,
         ),
       );
@@ -378,11 +376,11 @@ export function BlockEditor({
               prev.map((b) =>
                 b.id === blockId
                   ? {
-                      ...b,
-                      type: "paragraph",
-                      content: `${prefix}${b.content ?? ""}`,
-                      attributes: {},
-                    }
+                    ...b,
+                    type: "paragraph",
+                    content: `${prefix}${b.content ?? ""}`,
+                    attributes: {},
+                  }
                   : b,
               ),
             );
@@ -396,11 +394,11 @@ export function BlockEditor({
               prev.map((b) =>
                 b.id === blockId
                   ? {
-                      ...b,
-                      type: "paragraph",
-                      content: `> ${b.content ?? ""}`,
-                      attributes: {},
-                    }
+                    ...b,
+                    type: "paragraph",
+                    content: `> ${b.content ?? ""}`,
+                    attributes: {},
+                  }
                   : b,
               ),
             );
@@ -521,7 +519,7 @@ export function BlockEditor({
         // フォールバックでJSON文字列
         try {
           await navigator.clipboard.writeText(JSON.stringify(target));
-        } catch {}
+        } catch { }
       }
     },
     [blocks],
@@ -569,7 +567,7 @@ export function BlockEditor({
           block.type === "list";
         const handleBlockKeyDown = supportsKeyboardShortcuts
           ? (event: KeyboardEvent<HTMLDivElement>) =>
-              handleKeyDown(block.id, event)
+            handleKeyDown(block.id, event)
           : undefined;
 
         return (

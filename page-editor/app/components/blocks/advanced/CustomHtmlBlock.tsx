@@ -2,17 +2,7 @@
 
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import PreviewRoundedIcon from "@mui/icons-material/PreviewRounded";
-import {
-  Alert,
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Stack,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
-} from "@mui/material";
+import { Box, Card, CardContent, ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditableText } from "@/app/components/editor/EditableText";
 import type { BlockComponentProps } from "../types";
@@ -81,46 +71,59 @@ export function CustomHtmlBlock({
         overflow: "hidden",
       }}
     >
-      <CardHeader
-        title="Custom HTML"
-        subheader="Paste raw HTML and preview instantly."
-        sx={{ "& .MuiCardHeader-subheader": { color: "text.secondary" } }}
-        action={
-          !readOnly && (
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={mode}
-              onChange={handleModeChange}
+      <CardContent sx={{ p: 0 }}>
+        <Box
+          sx={{
+            position: "relative",
+            "&:hover .custom-html-controls, & .custom-html-controls:focus-within": {
+              opacity: 1,
+              pointerEvents: "auto",
+            },
+          }}
+        >
+          {!readOnly && (
+            <Box
+              className="custom-html-controls"
+              sx={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                zIndex: 1,
+                opacity: 0,
+                pointerEvents: "none",
+                transition: "opacity 120ms ease",
+                bgcolor: "rgba(15,23,42,0.5)",
+                backdropFilter: "blur(4px)",
+                borderRadius: 1,
+              }}
             >
-              <ToggleButton value="edit" aria-label="Edit HTML">
-                <CodeRoundedIcon fontSize="small" />
-              </ToggleButton>
-              <ToggleButton value="preview" aria-label="Preview HTML">
-                <PreviewRoundedIcon fontSize="small" />
-              </ToggleButton>
-            </ToggleButtonGroup>
-          )
-        }
-      />
-      <CardContent sx={{ pt: 0 }}>
-        <Stack spacing={2}>
-          <Alert severity="warning" variant="outlined">
-            HTML embeds render live inside the editor. Only paste HTML from
-            trusted sources. Scripts are executed as-is.
-          </Alert>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={mode}
+                onChange={handleModeChange}
+              >
+                <ToggleButton value="edit" aria-label="Edit HTML">
+                  <CodeRoundedIcon fontSize="small" />
+                </ToggleButton>
+                <ToggleButton value="preview" aria-label="Preview HTML">
+                  <PreviewRoundedIcon fontSize="small" />
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          )}
           {mode === "preview" || readOnly ? (
             <Box
               sx={{
                 borderRadius: 2,
                 border: (theme) => `1px dashed ${theme.palette.divider}`,
                 backgroundColor: "rgba(255,255,255,0.04)",
-                minHeight: 140,
-                p: 2,
+                minHeight: 100,
+                p: 1.25,
                 overflow: "auto",
               }}
             >
-              {sanitizedHtml ? (
+              {sanitizedHtml && (
                 <Box
                   ref={previewRef}
                   component="div"
@@ -132,10 +135,6 @@ export function CustomHtmlBlock({
                   /* biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized and intentionally rendered HTML */
                   dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
                 />
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Nothing to preview yet. Switch back to edit mode to add HTML.
-                </Typography>
               )}
             </Box>
           ) : (
@@ -152,13 +151,14 @@ export function CustomHtmlBlock({
                   'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
                 backgroundColor: "rgba(15,23,42,0.4)",
                 borderRadius: 2,
-                minHeight: 160,
+                minHeight: 140,
                 border: (theme) => `1px solid ${theme.palette.divider}`,
                 whiteSpace: "pre-wrap",
+                p: 1.25,
               }}
             />
           )}
-        </Stack>
+        </Box>
       </CardContent>
     </Card>
   );

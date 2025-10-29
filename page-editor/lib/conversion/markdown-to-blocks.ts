@@ -255,18 +255,7 @@ export function convertMarkdownToBlocks(markdown: string): Block[] {
       continue;
     }
 
-    if (line.startsWith("<Embed")) {
-      const attributes = parseAttributes(line);
-      const contentMatch = line.match(/>(.*)<\/Embed>/);
-      blocks.push(
-        createBlock("embed", {
-          content: contentMatch ? contentMatch[1] : "",
-          attributes,
-        }),
-      );
-      i++;
-      continue;
-    }
+    // Embed block is deprecated in favor of Html
 
     if (line.startsWith("<Html")) {
       const inlineMatch = line.match(/^<Html>(.*)<\/Html>$/);

@@ -17,7 +17,6 @@ export function summarizeBlock(block: Block): string {
       return summarizeImage(block);
     case "video":
     case "audio":
-    case "embed":
     case "bookmark":
       return summarizeMedia(block);
     case "file":

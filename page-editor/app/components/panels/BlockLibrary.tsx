@@ -101,6 +101,7 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
                     style={{
                       display: "flex",
                       alignItems: "center",
+                      justifyContent: "flex-start",
                       gap: 8,
                       padding: "4px 6px",
                       borderRadius: 6,
@@ -108,6 +109,7 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
                       border: "none",
                       background: "transparent",
                       outline: "none",
+                      textAlign: "left",
                     }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLButtonElement).style.background =
@@ -141,6 +143,7 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
                         display: "flex",
                         flexDirection: "column",
                         minWidth: 0,
+                        textAlign: "left",
                       }}
                     >
                       <div
@@ -150,6 +153,7 @@ export function BlockLibrary({ onInsertBlock }: BlockLibraryProps) {
                           whiteSpace: "nowrap",
                           textOverflow: "ellipsis",
                           overflow: "hidden",
+                          textAlign: "left",
                         }}
                       >
                         {item.label}

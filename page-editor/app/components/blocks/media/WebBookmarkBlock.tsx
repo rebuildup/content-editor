@@ -1,15 +1,9 @@
 "use client";
 
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
-import {
-  Card,
-  CardActionArea,
-  CardContent,
-  CardMedia,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Card, CardActionArea, CardContent, CardMedia, Stack, TextField, Typography, Box } from "@mui/material";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { sanitizeUrl } from "@/lib/utils/sanitize";
 import type { BlockComponentProps } from "../types";
 
 export function WebBookmarkBlock({
@@ -19,61 +13,92 @@ export function WebBookmarkBlock({
 }: BlockComponentProps) {
   const url = (block.attributes.url as string | undefined) ?? "";
   const title = (block.attributes.title as string | undefined) ?? "";
-  const description =
-    (block.attributes.description as string | undefined) ?? "";
+  const description = (block.attributes.description as string | undefined) ?? "";
   const image = (block.attributes.image as string | undefined) ?? "";
+
+  const [hovered, setHovered] = useState(false);
+  const safeUrl = useMemo(() => sanitizeUrl(url), [url]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchOg = async () => {
+      if (!safeUrl) {
+        if (image) {
+          onAttributesChange({ image: "" });
+        }
+        return;
+      }
+      try {
+        const res = await fetch(`/api/metadata?url=${encodeURIComponent(safeUrl)}`);
+        const data = (await res.json()) as { image?: string; title?: string; description?: string };
+        if (!cancelled) {
+          const next: Record<string, string> = {};
+          if ((data.image || "") !== (image || "")) next.image = data.image || "";
+          if ((data.title || "") !== (title || "")) next.title = data.title || "";
+          if ((data.description || "") !== (description || "")) next.description = data.description || "";
+          if (Object.keys(next).length > 0) {
+            onAttributesChange(next);
+          }
+        }
+      } catch {
+        if (!cancelled && image) {
+          onAttributesChange({ image: "" });
+        }
+      }
+    };
+    void fetchOg();
+    return () => {
+      cancelled = true;
+    };
+    // 注意: onAttributesChange は安定している前提。依存に含めないことで無限ループを防ぐ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeUrl]);
 
   return (
     <Card
       variant="outlined"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       sx={{
+        position: "relative",
         borderRadius: 3,
         border: (theme) => `1px solid ${theme.palette.divider}`,
         bgcolor: "rgba(255,255,255,0.02)",
       }}
     >
-      <CardContent sx={{ pb: 0 }}>
-        <Stack spacing={2}>
+      {!readOnly && (
+        <Box
+          className="bookmark-url-input"
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            zIndex: 2,
+            opacity: hovered ? 1 : 0,
+            pointerEvents: hovered ? "auto" : "none",
+            transition: "opacity 120ms ease",
+            bgcolor: "rgba(15,23,42,0.5)",
+            backdropFilter: "blur(4px)",
+            borderRadius: 1,
+            maxWidth: "min(520px, 80vw)",
+          }}
+        >
           <TextField
-            label="URL"
-            value={url}
-            onChange={(event) =>
-              onAttributesChange({ url: event.target.value })
-            }
-            disabled={readOnly}
+            size="small"
             placeholder="https://example.com"
+            value={url}
+            onChange={(event) => onAttributesChange({ url: event.target.value })}
+            onFocus={() => setHovered(true)}
+            onBlur={() => setHovered(false)}
+            sx={{
+              m: 1,
+              minWidth: 260,
+              "& .MuiInputBase-root": { bgcolor: "rgba(0,0,0,0.5)" },
+            }}
           />
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              label="Title"
-              value={title}
-              onChange={(event) =>
-                onAttributesChange({ title: event.target.value })
-              }
-              disabled={readOnly}
-              fullWidth
-            />
-            <TextField
-              label="Thumbnail URL"
-              value={image}
-              onChange={(event) =>
-                onAttributesChange({ image: event.target.value })
-              }
-              disabled={readOnly}
-              fullWidth
-            />
-          </Stack>
-          <TextField
-            label="Description"
-            value={description}
-            onChange={(event) =>
-              onAttributesChange({ description: event.target.value })
-            }
-            disabled={readOnly}
-            multiline
-            minRows={2}
-          />
-        </Stack>
+        </Box>
+      )}
+      <CardContent sx={{ p: 0 }}>
       </CardContent>
       <CardActionArea
         component="a"
@@ -98,20 +123,15 @@ export function WebBookmarkBlock({
             }}
           />
         ) : (
-          <Stack
-            alignItems="center"
-            justifyContent="center"
-            sx={{
-              width: 140,
-              bgcolor: "rgba(255,255,255,0.04)",
-            }}
-          >
-            <LaunchRoundedIcon color="primary" />
-          </Stack>
+          <Box sx={{ width: 0 }} />
         )}
         <CardContent sx={{ flex: 1 }}>
           <Typography variant="subtitle1" fontWeight={600}>
-            {title || "Bookmark preview"}
+            {title || (() => {
+              try {
+                return safeUrl ? new URL(safeUrl).host : "";
+              } catch { return ""; }
+            })() || "Bookmark"}
           </Typography>
           {description && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>

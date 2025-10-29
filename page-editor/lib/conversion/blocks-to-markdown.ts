@@ -150,14 +150,6 @@ export function convertBlocksToMarkdown(blocks: Block[]): string {
         );
         break;
       }
-      case "embed": {
-        const url = block.attributes.url ?? "";
-        const provider = block.attributes.provider
-          ? ` provider="${block.attributes.provider}"`
-          : "";
-        lines.push(`<Embed url="${url}"${provider}>${block.content}</Embed>`);
-        break;
-      }
       case "html": {
         lines.push("<Html>");
         lines.push(block.content);
@@ -251,9 +243,7 @@ export function createEmptyBlock(type: BlockType): Block {
       block.attributes.url = "";
       block.attributes.title = "";
       break;
-    case "embed":
-      block.attributes.url = "";
-      break;
+
     case "code":
       block.attributes.language = "plaintext";
       break;

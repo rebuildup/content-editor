@@ -18,7 +18,6 @@ export type BlockType =
   | "gallery"
   | "board"
   | "calendar"
-  | "embed"
   | "html"
   | "spacer";
 
