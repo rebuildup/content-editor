@@ -11,7 +11,7 @@ function extractMeta(content: string, url: URL) {
 
     for (const regex of patterns) {
         const match = content.match(regex);
-        if (match && match[1]) {
+        if (match?.[1]) {
             try {
                 const candidate = match[1].trim();
                 const absolute = new URL(candidate, url).toString();
@@ -23,23 +23,35 @@ function extractMeta(content: string, url: URL) {
     }
     // Title: prefer og:title then <title>
     let title = "";
-    const ogTitle = content.match(/<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i)
-        || content.match(/<meta[^>]+name=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i);
-    if (ogTitle && ogTitle[1]) {
+    const ogTitle =
+        content.match(
+            /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+        ) ||
+        content.match(
+            /<meta[^>]+name=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+        );
+    if (ogTitle?.[1]) {
         title = ogTitle[1].trim();
     } else {
         const titleMatch = content.match(/<title[^>]*>([^<]*)<\/title>/i);
-        if (titleMatch && titleMatch[1]) {
+        if (titleMatch?.[1]) {
             title = titleMatch[1].trim();
         }
     }
 
     // Description: prefer og:description then meta description
     let description = "";
-    const ogDesc = content.match(/<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i)
-        || content.match(/<meta[^>]+name=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i)
-        || content.match(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i);
-    if (ogDesc && ogDesc[1]) {
+    const ogDesc =
+        content.match(
+            /<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+        ) ||
+        content.match(
+            /<meta[^>]+name=["']og:description["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+        ) ||
+        content.match(
+            /<meta[^>]+name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i,
+        );
+    if (ogDesc?.[1]) {
         description = ogDesc[1].trim();
     }
 
@@ -57,7 +69,10 @@ export async function GET(request: Request) {
         try {
             targetUrl = new URL(target);
             if (!/^https?:$/.test(targetUrl.protocol)) {
-                return Response.json({ error: "unsupported protocol" }, { status: 400 });
+                return Response.json(
+                    { error: "unsupported protocol" },
+                    { status: 400 },
+                );
             }
         } catch {
             return Response.json({ error: "invalid url" }, { status: 400 });
@@ -86,13 +101,14 @@ export async function GET(request: Request) {
 }
 
 export function OPTIONS() {
-    return Response.json({}, {
-        headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    return Response.json(
+        {},
+        {
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            },
         },
-    });
+    );
 }
-
-

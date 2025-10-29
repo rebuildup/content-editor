@@ -161,12 +161,12 @@ export function BlockEditor({
         previous.map((block) =>
           block.id === id
             ? {
-              ...block,
-              attributes: {
-                ...block.attributes,
-                ...attributes,
-              },
-            }
+                ...block,
+                attributes: {
+                  ...block.attributes,
+                  ...attributes,
+                },
+              }
             : block,
         ),
       );
@@ -376,11 +376,11 @@ export function BlockEditor({
               prev.map((b) =>
                 b.id === blockId
                   ? {
-                    ...b,
-                    type: "paragraph",
-                    content: `${prefix}${b.content ?? ""}`,
-                    attributes: {},
-                  }
+                      ...b,
+                      type: "paragraph",
+                      content: `${prefix}${b.content ?? ""}`,
+                      attributes: {},
+                    }
                   : b,
               ),
             );
@@ -394,11 +394,11 @@ export function BlockEditor({
               prev.map((b) =>
                 b.id === blockId
                   ? {
-                    ...b,
-                    type: "paragraph",
-                    content: `> ${b.content ?? ""}`,
-                    attributes: {},
-                  }
+                      ...b,
+                      type: "paragraph",
+                      content: `> ${b.content ?? ""}`,
+                      attributes: {},
+                    }
                   : b,
               ),
             );
@@ -519,7 +519,7 @@ export function BlockEditor({
         // フォールバックでJSON文字列
         try {
           await navigator.clipboard.writeText(JSON.stringify(target));
-        } catch { }
+        } catch {}
       }
     },
     [blocks],
@@ -567,7 +567,7 @@ export function BlockEditor({
           block.type === "list";
         const handleBlockKeyDown = supportsKeyboardShortcuts
           ? (event: KeyboardEvent<HTMLDivElement>) =>
-            handleKeyDown(block.id, event)
+              handleKeyDown(block.id, event)
           : undefined;
 
         return (

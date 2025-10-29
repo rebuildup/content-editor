@@ -1,8 +1,15 @@
 "use client";
 
-import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
-import { Card, CardActionArea, CardContent, CardMedia, Stack, TextField, Typography, Box } from "@mui/material";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Box,
+  Card,
+  CardActionArea,
+  CardContent,
+  CardMedia,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
 import { sanitizeUrl } from "@/lib/utils/sanitize";
 import type { BlockComponentProps } from "../types";
 
@@ -13,7 +20,8 @@ export function WebBookmarkBlock({
 }: BlockComponentProps) {
   const url = (block.attributes.url as string | undefined) ?? "";
   const title = (block.attributes.title as string | undefined) ?? "";
-  const description = (block.attributes.description as string | undefined) ?? "";
+  const description =
+    (block.attributes.description as string | undefined) ?? "";
   const image = (block.attributes.image as string | undefined) ?? "";
 
   const [hovered, setHovered] = useState(false);
@@ -29,13 +37,22 @@ export function WebBookmarkBlock({
         return;
       }
       try {
-        const res = await fetch(`/api/metadata?url=${encodeURIComponent(safeUrl)}`);
-        const data = (await res.json()) as { image?: string; title?: string; description?: string };
+        const res = await fetch(
+          `/api/metadata?url=${encodeURIComponent(safeUrl)}`,
+        );
+        const data = (await res.json()) as {
+          image?: string;
+          title?: string;
+          description?: string;
+        };
         if (!cancelled) {
           const next: Record<string, string> = {};
-          if ((data.image || "") !== (image || "")) next.image = data.image || "";
-          if ((data.title || "") !== (title || "")) next.title = data.title || "";
-          if ((data.description || "") !== (description || "")) next.description = data.description || "";
+          if ((data.image || "") !== (image || ""))
+            next.image = data.image || "";
+          if ((data.title || "") !== (title || ""))
+            next.title = data.title || "";
+          if ((data.description || "") !== (description || ""))
+            next.description = data.description || "";
           if (Object.keys(next).length > 0) {
             onAttributesChange(next);
           }
@@ -50,9 +67,7 @@ export function WebBookmarkBlock({
     return () => {
       cancelled = true;
     };
-    // 注意: onAttributesChange は安定している前提。依存に含めないことで無限ループを防ぐ
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [safeUrl]);
+  }, [safeUrl, image, title, description, onAttributesChange]);
 
   return (
     <Card
@@ -87,7 +102,9 @@ export function WebBookmarkBlock({
             size="small"
             placeholder="https://example.com"
             value={url}
-            onChange={(event) => onAttributesChange({ url: event.target.value })}
+            onChange={(event) =>
+              onAttributesChange({ url: event.target.value })
+            }
             onFocus={() => setHovered(true)}
             onBlur={() => setHovered(false)}
             sx={{
@@ -98,8 +115,7 @@ export function WebBookmarkBlock({
           />
         </Box>
       )}
-      <CardContent sx={{ p: 0 }}>
-      </CardContent>
+      <CardContent sx={{ p: 0 }}></CardContent>
       <CardActionArea
         component="a"
         disabled={!url}
@@ -127,11 +143,15 @@ export function WebBookmarkBlock({
         )}
         <CardContent sx={{ flex: 1 }}>
           <Typography variant="subtitle1" fontWeight={600}>
-            {title || (() => {
-              try {
-                return safeUrl ? new URL(safeUrl).host : "";
-              } catch { return ""; }
-            })() || "Bookmark"}
+            {title ||
+              (() => {
+                try {
+                  return safeUrl ? new URL(safeUrl).host : "";
+                } catch {
+                  return "";
+                }
+              })() ||
+              "Bookmark"}
           </Typography>
           {description && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>

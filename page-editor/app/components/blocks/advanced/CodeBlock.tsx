@@ -1,9 +1,17 @@
 "use client";
 
 import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
-import { Box, IconButton, MenuItem, Paper, Select, ToggleButton, ToggleButtonGroup } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import {
+  Box,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
 import Prism from "prismjs";
+import { useEffect, useMemo, useState } from "react";
 import "prismjs/components/prism-markup";
 import "prismjs/components/prism-clike";
 import "prismjs/components/prism-javascript";
@@ -37,7 +45,7 @@ export function CodeBlock({
 
   const normalizedLang = useMemo(() => {
     const input = (language || "").trim().toLowerCase();
-    const preferred = input ? aliasMap[input] ?? input : "plaintext";
+    const preferred = input ? (aliasMap[input] ?? input) : "plaintext";
     return preferred || "plaintext";
   }, [language]);
 
@@ -59,7 +67,9 @@ export function CodeBlock({
     if (!name || name === "plaintext") return;
     const load = async () => {
       try {
-        await import(`prismjs/components/prism-${name}.js` as unknown as string);
+        await import(
+          `prismjs/components/prism-${name}.js` as unknown as string
+        );
       } catch {
         // ignore missing language
       } finally {
@@ -129,27 +139,15 @@ export function CodeBlock({
             pointerEvents: "none",
             transition: "opacity 120ms ease",
             zIndex: 3,
-
-
-
-
-
-
-
-
-
-
-
-
-
-
           }}
           className="codeblock-controls"
         >
           <Select
             size="small"
             value={language || ""}
-            onChange={(event) => onAttributesChange({ language: String(event.target.value) })}
+            onChange={(event) =>
+              onAttributesChange({ language: String(event.target.value) })
+            }
             displayEmpty
             sx={{
               minWidth: 140,
@@ -200,9 +198,15 @@ export function CodeBlock({
               "& .MuiToggleButton-root": { color: "#fff", px: 1 },
             }}
           >
-            <ToggleButton value="edit" aria-label="Edit">E</ToggleButton>
-            <ToggleButton value="split" aria-label="Split">S</ToggleButton>
-            <ToggleButton value="preview" aria-label="Preview">P</ToggleButton>
+            <ToggleButton value="edit" aria-label="Edit">
+              E
+            </ToggleButton>
+            <ToggleButton value="split" aria-label="Split">
+              S
+            </ToggleButton>
+            <ToggleButton value="preview" aria-label="Preview">
+              P
+            </ToggleButton>
           </ToggleButtonGroup>
           <IconButton
             size="small"
@@ -237,6 +241,7 @@ export function CodeBlock({
           >
             <code
               className={`language-${normalizedLang}`}
+              /* biome-ignore lint/security/noDangerouslySetInnerHtml: Code is highlighted by Prism or escaped; trusted source */
               dangerouslySetInnerHTML={{
                 __html: highlightedHtml,
               }}
@@ -300,6 +305,7 @@ export function CodeBlock({
               >
                 <code
                   className={`language-${normalizedLang}`}
+                  /* biome-ignore lint/security/noDangerouslySetInnerHtml: Code is highlighted by Prism or escaped; trusted source */
                   dangerouslySetInnerHTML={{ __html: highlightedHtml }}
                 />
               </pre>

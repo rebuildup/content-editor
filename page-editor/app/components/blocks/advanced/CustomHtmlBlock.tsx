@@ -2,7 +2,13 @@
 
 import CodeRoundedIcon from "@mui/icons-material/CodeRounded";
 import PreviewRoundedIcon from "@mui/icons-material/PreviewRounded";
-import { Box, Card, CardContent, ToggleButton, ToggleButtonGroup } from "@mui/material";
+import {
+  Box,
+  Card,
+  CardContent,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditableText } from "@/app/components/editor/EditableText";
 import type { BlockComponentProps } from "../types";
@@ -75,10 +81,11 @@ export function CustomHtmlBlock({
         <Box
           sx={{
             position: "relative",
-            "&:hover .custom-html-controls, & .custom-html-controls:focus-within": {
-              opacity: 1,
-              pointerEvents: "auto",
-            },
+            "&:hover .custom-html-controls, & .custom-html-controls:focus-within":
+              {
+                opacity: 1,
+                pointerEvents: "auto",
+              },
           }}
         >
           {!readOnly && (

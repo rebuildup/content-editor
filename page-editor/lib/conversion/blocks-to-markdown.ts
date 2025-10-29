@@ -27,27 +27,29 @@ function escapeText(text: string): string {
 }
 
 export function convertBlocksToMarkdown(blocks: Block[]): string {
-  const lines: string[] = [];
+  // 各ブロックを単位として文字列化し、ブロック間のみ空行で区切る
+  const chunks: string[] = [];
 
   blocks.forEach((block) => {
+    const blockLines: string[] = [];
     switch (block.type) {
       case "paragraph": {
-        lines.push(escapeText(block.content));
+        blockLines.push(escapeText(block.content));
         break;
       }
       case "heading": {
         const level = Number(block.attributes.level ?? 1);
         const prefix = "#".repeat(Math.min(Math.max(level, 1), 6));
-        lines.push(`${prefix} ${escapeText(block.content)}`.trim());
+        blockLines.push(`${prefix} ${escapeText(block.content)}`.trim());
         break;
       }
       case "quote": {
         const quoteLines = block.content
           .split(/\r?\n/)
           .map((line) => `> ${line}`.trimEnd());
-        lines.push(...quoteLines);
+        blockLines.push(...quoteLines);
         if (block.attributes.citation) {
-          lines.push(`> — ${block.attributes.citation}`);
+          blockLines.push(`> — ${block.attributes.citation}`);
         }
         break;
       }
@@ -55,18 +57,18 @@ export function convertBlocksToMarkdown(blocks: Block[]): string {
         const type = block.attributes.type ?? "info";
         const icon =
           (block.attributes.icon as string | undefined) ?? DEFAULT_ICON;
-        lines.push(`<Callout type="${type}" icon="${icon}">`);
-        lines.push(block.content);
-        lines.push("</Callout>");
+        blockLines.push(`<Callout type="${type}" icon="${icon}">`);
+        blockLines.push(block.content);
+        blockLines.push("</Callout>");
         break;
       }
       case "divider": {
-        lines.push("---");
+        blockLines.push("---");
         break;
       }
       case "spacer": {
         const height = block.attributes.height ?? 24;
-        lines.push(`<Spacer height="${height}" />`);
+        blockLines.push(`<Spacer height="${height}" />`);
         break;
       }
       case "list": {
@@ -74,33 +76,33 @@ export function convertBlocksToMarkdown(blocks: Block[]): string {
           ? (block.attributes.items as ListItem[])
           : [];
         const ordered = Boolean(block.attributes.ordered);
-        lines.push(...formatList(items, ordered));
+        blockLines.push(...formatList(items, ordered));
         break;
       }
       case "code": {
         const language =
           (block.attributes.language as string | undefined) ?? "";
         const fence = language ? `\`\`\`${language}` : "```";
-        lines.push(fence);
-        lines.push(block.content);
-        lines.push("```");
+        blockLines.push(fence);
+        blockLines.push(block.content);
+        blockLines.push("```");
         break;
       }
       case "math": {
-        lines.push("<Math>");
-        lines.push(block.content);
-        lines.push("</Math>");
+        blockLines.push("<Math>");
+        blockLines.push(block.content);
+        blockLines.push("</Math>");
         break;
       }
       case "toggle": {
         const summary = block.attributes.summary ?? "Details";
-        lines.push(`<Toggle summary="${summary}">`);
+        blockLines.push(`<Toggle summary="${summary}">`);
         if (block.children && block.children.length > 0) {
-          lines.push(convertBlocksToMarkdown(block.children));
+          blockLines.push(convertBlocksToMarkdown(block.children));
         } else {
-          lines.push(block.content);
+          blockLines.push(block.content);
         }
-        lines.push("</Toggle>");
+        blockLines.push("</Toggle>");
         break;
       }
       case "image": {
@@ -112,7 +114,7 @@ export function convertBlocksToMarkdown(blocks: Block[]): string {
         const height = block.attributes.height
           ? ` height="${block.attributes.height}"`
           : "";
-        lines.push(
+        blockLines.push(
           `<Image src="${src}" alt="${alt}"${width}${height}>${block.content}</Image>`,
         );
         break;
@@ -124,7 +126,7 @@ export function convertBlocksToMarkdown(blocks: Block[]): string {
           : "";
         const autoplay = block.attributes.autoplay ? " autoplay" : "";
         const controls = block.attributes.controls === false ? "" : " controls";
-        lines.push(
+        blockLines.push(
           `<Video src="${src}"${poster}${controls}${autoplay}>${block.content}</Video>`,
         );
         break;
@@ -133,65 +135,69 @@ export function convertBlocksToMarkdown(blocks: Block[]): string {
         const src = block.attributes.src ?? "";
         const autoplay = block.attributes.autoplay ? " autoplay" : "";
         const controls = block.attributes.controls === false ? "" : " controls";
-        lines.push(`<Audio src="${src}"${controls}${autoplay} />`);
+        blockLines.push(`<Audio src="${src}"${controls}${autoplay} />`);
         break;
       }
       case "file": {
         const src = block.attributes.src ?? "";
         const filename = block.attributes.filename ?? "file";
-        lines.push(`<File src="${src}" name="${filename}" />`);
+        blockLines.push(`<File src="${src}" name="${filename}" />`);
         break;
       }
       case "bookmark": {
         const url = block.attributes.url ?? "";
         const title = block.attributes.title ?? "";
-        lines.push(
+        blockLines.push(
           `<Bookmark url="${url}" title="${title}">${block.content}</Bookmark>`,
         );
         break;
       }
       case "html": {
-        lines.push("<Html>");
-        lines.push(block.content);
-        lines.push("</Html>");
+        blockLines.push("<Html>");
+        blockLines.push(block.content);
+        blockLines.push("</Html>");
         break;
       }
       case "table": {
-        lines.push("<Table>");
-        lines.push(block.content);
-        lines.push("</Table>");
+        blockLines.push("<Table>");
+        blockLines.push(block.content);
+        blockLines.push("</Table>");
         break;
       }
       case "tableOfContents": {
-        lines.push("<TableOfContents />");
+        blockLines.push("<TableOfContents />");
         break;
       }
       case "gallery": {
-        lines.push("<Gallery>");
-        lines.push(block.content);
-        lines.push("</Gallery>");
+        blockLines.push("<Gallery>");
+        blockLines.push(block.content);
+        blockLines.push("</Gallery>");
         break;
       }
       case "board": {
-        lines.push("<Board>");
-        lines.push(block.content);
-        lines.push("</Board>");
+        blockLines.push("<Board>");
+        blockLines.push(block.content);
+        blockLines.push("</Board>");
         break;
       }
       case "calendar": {
-        lines.push("<Calendar>");
-        lines.push(block.content);
-        lines.push("</Calendar>");
+        blockLines.push("<Calendar>");
+        blockLines.push(block.content);
+        blockLines.push("</Calendar>");
         break;
       }
       default: {
-        lines.push(block.content);
+        blockLines.push(block.content);
         break;
       }
     }
+
+    // ブロック内部は単一改行で結合
+    chunks.push(blockLines.join("\n"));
   });
 
-  return lines.join("\n\n").trim();
+  // ブロック間は空行で区切る
+  return chunks.join("\n\n").trim();
 }
 
 export function createEmptyBlock(type: BlockType): Block {
