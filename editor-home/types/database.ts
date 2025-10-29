@@ -70,7 +70,7 @@ export interface MediaRow {
   alt: string;
   description?: string;
   tags?: string;
-  data?: string;
+  data?: Buffer | string;
   created_at?: string;
   updated_at?: string;
 }

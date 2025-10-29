@@ -2,9 +2,10 @@
  * メディア（画像）管理機能
  */
 
+import type Database from "better-sqlite3";
 import type { MediaRow } from "@/types/database";
 import type { MediaItem } from "@/types/media";
-import { getContentDb } from "./content-db-manager";
+import { getContentDb, getFromIndex } from "./content-db-manager";
 
 // ========== メディア保存 ==========
 
@@ -26,6 +27,8 @@ export function saveMedia(
   const db = getContentDb(contentId);
 
   try {
+    ensureContentRow(db, contentId);
+
     const stmt = db.prepare(`
       INSERT OR REPLACE INTO media (
         id, content_id, filename, mime_type, size, width, height, alt, description, tags, data, created_at, updated_at
@@ -70,6 +73,8 @@ export function getMedia(contentId: string, mediaId: string): MediaItem | null {
 
     if (!row) return null;
 
+    const data = deriveMediaBuffer(row.data);
+
     return {
       id: row.id,
       contentId: row.content_id,
@@ -81,7 +86,7 @@ export function getMedia(contentId: string, mediaId: string): MediaItem | null {
       alt: row.alt,
       description: row.description || "",
       tags: row.tags ? JSON.parse(row.tags) : [],
-      data: row.data ? Buffer.from(row.data, "base64") : undefined,
+      data,
       createdAt: row.created_at || new Date().toISOString(),
       updatedAt: row.updated_at || new Date().toISOString(),
     };
@@ -187,3 +192,55 @@ export function getMediaStats(contentId: string): {
     db.close();
   }
 }
+
+function deriveMediaBuffer(source: MediaRow["data"]): Buffer | undefined {
+  if (!source) {
+    return undefined;
+  }
+  if (typeof source === "string") {
+    return Buffer.from(source, "base64");
+  }
+  if (Buffer.isBuffer(source)) {
+    return Buffer.from(source);
+  }
+  return undefined;
+}
+
+
+
+function ensureContentRow(db: Database.Database, contentId: string) {
+  if (!contentId) {
+    return;
+  }
+
+  const exists = db
+    .prepare("SELECT 1 FROM contents WHERE id = ?")
+    .get(contentId) as unknown;
+  if (exists) {
+    return;
+  }
+
+  const indexData = getFromIndex(contentId);
+  const now = new Date().toISOString();
+
+  const payload = {
+    id: contentId,
+    title: indexData?.title ?? contentId,
+    summary: indexData?.summary ?? null,
+    lang: indexData?.lang ?? "ja",
+    visibility: indexData?.visibility ?? "draft",
+    status: indexData?.status ?? "draft",
+    published_at: indexData?.publishedAt ?? null,
+    created_at: indexData?.createdAt ?? now,
+    updated_at: indexData?.updatedAt ?? now,
+  };
+
+  db.prepare(
+    `INSERT INTO contents (
+      id, title, summary, lang, visibility, status, published_at, created_at, updated_at
+    ) VALUES (
+      @id, @title, @summary, @lang, @visibility, @status, @published_at, @created_at, @updated_at
+    )`,
+  ).run(payload);
+}
+

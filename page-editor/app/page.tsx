@@ -364,6 +364,7 @@ export default function PageEditorHome() {
           applyBlocks={applyBlocks}
           readOnly={false}
           onSelectBlock={setActiveBlockId}
+          contentId={selectedContentId}
         />
       }
       rightPanel={<BlockLibrary onInsertBlock={handleInsertBlock} />}

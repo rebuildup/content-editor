@@ -91,6 +91,7 @@ interface BlockEditorProps {
   applyBlocks: (updater: (previous: Block[]) => Block[]) => void;
   readOnly?: boolean;
   onSelectBlock?: (blockId: string | null) => void;
+  contentId?: string;
 }
 
 export function BlockEditor({
@@ -99,6 +100,7 @@ export function BlockEditor({
   applyBlocks,
   readOnly = false,
   onSelectBlock,
+  contentId,
 }: BlockEditorProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -458,6 +460,7 @@ export function BlockEditor({
                 <Component
                   block={block}
                   readOnly={readOnly}
+                  contentId={contentId}
                   onContentChange={(content) =>
                     updateContent(block.id, content)
                   }

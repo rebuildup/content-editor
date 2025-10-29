@@ -48,7 +48,9 @@ export async function uploadMediaFile(
 }
 
 export function getMediaUrl(contentId: string, id: string) {
-  return buildUrl("/api/media", { contentId, id });
+  const encodedContentId = encodeURIComponent(contentId);
+  const encodedId = encodeURIComponent(id);
+  return buildUrl(`/api/media/${encodedContentId}/${encodedId}`);
 }
 
 async function fileToBase64(file: File) {

@@ -9,4 +9,5 @@ export interface BlockComponentProps {
   onItemsChange?: (items: ListItem[]) => void;
   autoFocus?: boolean;
   onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void;
+  contentId?: string;
 }

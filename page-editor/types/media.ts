@@ -16,7 +16,7 @@ export interface MediaItem {
 }
 
 export interface MediaUploadRequest {
-  contentId?: string;
+  contentId: string;
   filename: string;
   mimeType: string;
   base64Data: string;
